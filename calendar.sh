@@ -73,7 +73,7 @@ show_main_screen() {
 │  6. ➡️  다음 달                       │
 │  7. 📅 특정 달로 이동                │
 │  8. 💬 터미널 채팅                   │
-│  9. 🔧 추가기능 2 (미구현)           │
+│  9. ⏱️  뽀모도로 타이머              │
 │  0. 🚪 종료                          │
 └──────────────────────────────────────┘
 EOF
@@ -321,6 +321,22 @@ run_chat_system() {
     echo -e "${YELLOW}채팅 시스템을 종료했습니다. Enter를 눌러 캘린더로 돌아갑니다...${RESET}"
     read
 }
+
+# 뽀모도로 타이머 실행
+run_pomodoro_timer() {
+    echo
+    echo -e "${CYAN}${BOLD}=== 뽀모도로 타이머 ===${RESET}"
+    echo -e "${WHITE}뽀모도로 타이머를 시작합니다.${RESET}"
+    echo -e "${YELLOW}작업 시간: 25분${RESET}"
+    echo -e "${YELLOW}짧은 휴식: 5분${RESET}"
+    echo -e "${YELLOW}긴 휴식: 15분${RESET}"
+    echo -e "${YELLOW}4개의 세션 후 긴 휴식${RESET}"
+    echo
+    echo -e "${WHITE}Enter를 눌러 시작...${RESET}"
+    read
+    
+    $PROGRAM_DIR/pomodoro_timer
+}
 # [message (1).txt 통합을 위해 추가된 코드 종료]
 
 # [calendar.sh 수정본2.txt 기반 코드 시작]
@@ -347,8 +363,8 @@ main_loop() {
             5) prev_month ;;
             6) next_month ;;
             7) goto_month ;;
-            8) run_chat_system ;;   # [수정] 추가기능 1 대신 채팅 시스템 호출
-            9) additional_feature_2 ;;
+            8) run_chat_system ;;
+            9) run_pomodoro_timer ;;
             0) 
                 echo
                 echo -e "${GREEN}터미널 캘린더를 종료합니다. 👋${RESET}"
