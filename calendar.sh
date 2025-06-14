@@ -324,17 +324,6 @@ run_chat_system() {
 
 # 뽀모도로 타이머 실행
 run_pomodoro_timer() {
-    echo
-    echo -e "${CYAN}${BOLD}=== 뽀모도로 타이머 ===${RESET}"
-    echo -e "${WHITE}뽀모도로 타이머를 시작합니다.${RESET}"
-    echo -e "${YELLOW}작업 시간: 25분${RESET}"
-    echo -e "${YELLOW}짧은 휴식: 5분${RESET}"
-    echo -e "${YELLOW}긴 휴식: 15분${RESET}"
-    echo -e "${YELLOW}4개의 세션 후 긴 휴식${RESET}"
-    echo
-    echo -e "${WHITE}Enter를 눌러 시작...${RESET}"
-    read
-    
     $PROGRAM_DIR/pomodoro_timer
 }
 # [message (1).txt 통합을 위해 추가된 코드 종료]
