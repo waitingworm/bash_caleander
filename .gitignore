@@ -1,0 +1,22 @@
+# 컴파일된 실행 파일
+calendar_system
+calendar_schedule
+terminal_chat
+
+# 임시 파일
+*.o
+*.out
+/tmp/*
+!/.gitkeep
+
+# 데이터 파일
+schedules.txt
+chat_log.txt
+files.txt
+temp.txt
+
+# IDE 관련 파일
+.vscode/
+.idea/
+*.swp
+*.swo 
