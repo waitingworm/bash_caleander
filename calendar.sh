@@ -66,82 +66,85 @@ show_main_screen() {
 │  5. ⬅️  이전 달                       │
 │  6. ➡️  다음 달                       │
 │  7. 📅 특정 달로 이동                │
-│  8. 🔧 추가기능 1                    │
-│  9. 🔧 추가기능 2                    │
+│  8. 💬 채팅 시스템                   │
+│  9. ⏱️ 뽀모도로 타이머               │
 │  0. 🚪 종료                          │
 └──────────────────────────────────────┘
 EOF
     
-    # 일정 정보 업데이트
-    if [ -f "$PROGRAM_DIR/calendar_schedule" ];
-    then
-        SCHEDULE_OUTPUT=$($PROGRAM_DIR/calendar_schedule show $CURRENT_YEAR $CURRENT_MONTH 2>/dev/null)
-        SCHEDULE_RESULT=$?
-        if [ $SCHEDULE_RESULT -eq 0 ] && [ ! -z "$SCHEDULE_OUTPUT" ];
-        then
-            # 일정이 있는 경우
-            echo "$SCHEDULE_OUTPUT" | grep "일:" > /tmp/schedule_raw.txt
+	# 일정 정보 업데이트
+	if [ -f "$PROGRAM_DIR/calendar_schedule" ]; then
+		SCHEDULE_OUTPUT=$($PROGRAM_DIR/calendar_schedule show $CURRENT_YEAR $CURRENT_MONTH 2>/dev/null)
+		SCHEDULE_RESULT=$?
+      
+      		if [ $SCHEDULE_RESULT -eq 0 ] && [ ! -z "$SCHEDULE_OUTPUT" ]; then
+			# 일정이 있는 경우 - 실제 일정 내용을 파싱하여 표시
+		            
+			# 헤더 라인을 제거하고 실제 일정만 추출
+			echo "$SCHEDULE_OUTPUT" | grep "일:" > /tmp/schedule_raw.txt
             
-            LINE_COUNT=1
-            while read -r schedule_line && [ $LINE_COUNT -le 8 ];
-            do
-                if [ ! -z "$schedule_line" ]; then
-                    FORMATTED_LINE=$(echo "$schedule_line" | sed 's/^ *\([0-9]\+\)일: \(.*\)/ \1일: \2/')
+			# 최대 8개 일정을 메뉴박스에 표시할 수 있음
+			LINE_COUNT=1
+			while read -r schedule_line && [ $LINE_COUNT -le 8 ]; do
+				if [ ! -z "$schedule_line" ]; then
+					# 일정 라인을 메뉴박스 형식에 맞게 변환
+					# "일: 제목" 형식을 " 일일: 제목" 형식으로 변환하고 38자로 맞춤
+					FORMATTED_LINE=$(echo "$schedule_line" | sed 's/^ *\([0-9]\+\)일: \(.*\)/ \1일: \2/')
+	
+					# 38자 길이로 맞추기 (한글 고려하여 간단하게 처리)
+					if [ ${#FORMATTED_LINE} -gt 36 ]; then
+						FORMATTED_LINE=$(echo "$FORMATTED_LINE" | cut -c1-33)"..."
+					fi
                     
-                    if [ ${#FORMATTED_LINE} -gt 36 ];
-                    then
-                        FORMATTED_LINE=$(echo "$FORMATTED_LINE" | cut -c1-33)...
-                    fi
+					# 남은 공간을 공백으로 채우기
+					REAL_WIDTH=$(echo "$FORMATTED_LINE" | awk 'BEGIN{w=0} {for(i=1;i<=length($0);i++){c=substr($0,i,1); w+=(c ~ /[가-힣🀄-🧿]/ ? 2 : 1)}} END{print w}')
+					SPACES_NEEDED=$((38 - REAL_WIDTH))
+					PADDING=""
+					for i in $(seq 1 $SPACES_NEEDED); do
+						PADDING="$PADDING "
+					done
                     
-		    REAL_WIDTH=$(echo "$FORMATTED_LINE" | awk 'BEGIN{w=0} {for(i=1;i<=length($0);i++){c=substr($0,i,1); w+=(c ~ /[가-힣]/ ? 2 : 1)}} END{print w}')
-		    SPACES_NEEDED=$((38 - REAL_WIDTH))
-                    PADDING=""
-                    for i in $(seq 1 $SPACES_NEEDED);
-                    do
-                        PADDING="$PADDING "
-                    done
-                    
-                    echo "│$FORMATTED_LINE$PADDING│" >> /tmp/schedule_lines.txt
-                    LINE_COUNT=$((LINE_COUNT + 1))
-                else
-                    break
-                fi
-            done < /tmp/schedule_raw.txt
+					echo "│$FORMATTED_LINE$PADDING│" >> /tmp/schedule_lines.txt
+					LINE_COUNT=$((LINE_COUNT + 1))
+				else
+					break
+                		fi
+			done < /tmp/schedule_raw.txt
             
-            while [ $LINE_COUNT -le 8 ];
-            do
-                echo "│                                      │" >> /tmp/schedule_lines.txt
-                LINE_COUNT=$((LINE_COUNT + 1))
-            done
-            
-            rm -f /tmp/schedule_raw.txt
-        else
-            # 일정이 없는 경우
-            echo "│ 이번 달에는 일정이 없습니다.          │" > /tmp/schedule_lines.txt
-            for i in $(seq 2 8);
-            do
-                echo "│                                      │" >> /tmp/schedule_lines.txt
-            done
-        fi
+			# 빈 줄로 나머지 채우기
+			while [ $LINE_COUNT -le 8 ]; do
+				echo "│                                      │" >> /tmp/schedule_lines.txt
+				LINE_COUNT=$((LINE_COUNT + 1))
+			done
+		            
+			rm -f /tmp/schedule_raw.txt
+		else
+			# 일정이 없는 경우
+			echo "│ 이번 달에는 일정이 없습니다.          │" > /tmp/schedule_lines.txt
+			for i in $(seq 2 8); do
+				echo "│                                      │" >> /tmp/schedule_lines.txt
+			done
+		fi
         
-        {
-            head -3 /tmp/menu_box.txt
-            cat /tmp/schedule_lines.txt
-            tail -n +12 /tmp/menu_box.txt
-        } > /tmp/menu_box_updated.txt
+        	# 메뉴 박스의 일정 부분 (4-11번째 줄)을 새로운 일정 내용으로 교체
+		{
+			head -3 /tmp/menu_box.txt  # 헤더 부분
+			cat /tmp/schedule_lines.txt  # 일정 부분
+			tail -n +12 /tmp/menu_box.txt  # 메뉴 부분
+		} > /tmp/menu_box_updated.txt
         
-        cp /tmp/menu_box_updated.txt /tmp/menu_box.txt
-        rm -f /tmp/schedule_lines.txt /tmp/menu_box_updated.txt
-    fi
+        	cp /tmp/menu_box_updated.txt /tmp/menu_box.txt
+		rm -f /tmp/schedule_lines.txt /tmp/menu_box_updated.txt
+	fi
     
-    # 캘린더와 메뉴를 좌우로 배치
-    paste -d ' ' /tmp/calendar_output.txt /tmp/menu_box.txt
+    	# 캘린더와 메뉴를 좌우로 배치
+	paste -d ' ' /tmp/calendar_output.txt /tmp/menu_box.txt
     
-    echo
-    echo -e "${WHITE}현재: ${BOLD}${CURRENT_YEAR}년 ${CURRENT_MONTH}월${RESET}                                                      선택하세요 (0-9): \c"
-    
-    # 임시 파일 정리
-    rm -f /tmp/calendar_output.txt /tmp/menu_box.txt
+	echo
+	echo -e "${WHITE}현재: ${BOLD}${CURRENT_YEAR}년 ${CURRENT_MONTH}월${RESET}                                                      선택하세요 (0-9): \c"
+
+	# 임시 파일 정리
+	rm -f /tmp/calendar_output.txt /tmp/menu_box.txt
 }
 
 # ========== 숫자 검증 함수 ==========
@@ -302,7 +305,6 @@ goto_month() {
         echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"; read
     fi
 }
-# [calendar.sh 수정본2.txt 기반 코드 종료]
 
 # [message (1).txt 통합을 위해 추가된 코드 시작]
 # ========== 추가 기능 함수들 ==========
@@ -320,9 +322,7 @@ run_chat_system() {
 run_pomodoro_timer() {
     $PROGRAM_DIR/pomodoro_timer
 }
-# [message (1).txt 통합을 위해 추가된 코드 종료]
 
-# [calendar.sh 수정본2.txt 기반 코드 시작]
 # 추가기능 2 (미구현)
 additional_feature_2() {
     echo
@@ -365,4 +365,3 @@ main_loop() {
 # ========== 프로그램 시작 ==========
 check_programs
 main_loop
-# [calendar.sh 수정본2.txt 기반 코드 종료]
