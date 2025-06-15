@@ -6,243 +6,289 @@
 #include <signal.h>
 #include <termios.h>
 #include <fcntl.h>
+#include <locale.h>
 
-#define DEFAULT_WORK_TIME 25 * 60  // 25분
-#define DEFAULT_SHORT_BREAK 5 * 60  // 5분
-#define DEFAULT_LONG_BREAK 15 * 60  // 15분
+#define WORK_TIME 25
+#define SHORT_BREAK 5
+#define LONG_BREAK 15
 #define SESSIONS_BEFORE_LONG_BREAK 4
 
 // 전역 변수
-int work_time = DEFAULT_WORK_TIME;
-int short_break = DEFAULT_SHORT_BREAK;
-int long_break = DEFAULT_LONG_BREAK;
-int remaining_time = DEFAULT_WORK_TIME;
+int work_time = WORK_TIME;
+int short_break = SHORT_BREAK;
+int long_break = LONG_BREAK;
+int sessions_before_long_break = SESSIONS_BEFORE_LONG_BREAK;
+int remaining_time = WORK_TIME;
 int is_paused = 0;
 int current_session = 1;
 int total_sessions = 0;
 int total_work_time = 0;
-char current_task[256] = "작업 없음";
+char current_task[100] = "";
 
-// 함수 선언
-int kbhit(void);
-void show_settings(void);
-void show_statistics(void);
-void start_timer(void);
+// 터미널 설정 구조체
+struct termios orig_termios;
 
-// 터미널 설정 함수
-void set_terminal_mode() {
-    struct termios term;
-    tcgetattr(0, &term);
-    term.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(0, TCSANOW, &term);
+// 터미널 설정 초기화
+void init_terminal() {
+    tcgetattr(STDIN_FILENO, &orig_termios);
+    struct termios new_termios = orig_termios;
+    new_termios.c_lflag &= ~ICANON;  // ECHO는 유지
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
 }
 
-// 터미널 복원 함수
-void reset_terminal_mode() {
-    struct termios term;
-    tcgetattr(0, &term);
-    term.c_lflag |= ICANON | ECHO;
-    tcsetattr(0, TCSANOW, &term);
+// 터미널 설정 복원
+void restore_terminal() {
+    tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
+}
+
+// 진행률 표시 함수
+void display_progress(int current, int total, int width) {
+    float progress = (float)current / total;
+    int filled = (int)(progress * width);
+    
+    printf("\r[");
+    for (int i = 0; i < width; i++) {
+        if (i < filled) printf("=");
+        else printf(" ");
+    }
+    printf("] %d%%", (int)(progress * 100));
+    fflush(stdout);
 }
 
 // 타이머 표시 함수
-void display_timer() {
-    int minutes = remaining_time / 60;
-    int seconds = remaining_time % 60;
-    int total_time = (current_session % SESSIONS_BEFORE_LONG_BREAK == 0) ? long_break : 
-                    (is_paused ? remaining_time : work_time);
-    int progress = ((total_time - remaining_time) * 50) / total_time;
-    
-    printf("\033[2J\033[H");  // 화면 클리어
+void display_timer(int minutes, int seconds, int total_seconds, const char* phase) {
+    printf("\033[2J\033[H");  // 화면 지우기
     printf("=== 뽀모도로 타이머 ===\n\n");
-    printf("현재 작업: %s\n", current_task);
-    printf("현재 세션: %d/%d\n", current_session, SESSIONS_BEFORE_LONG_BREAK);
-    printf("총 작업 시간: %d분\n\n", total_work_time / 60);
-    printf("남은 시간: %02d:%02d\n\n", minutes, seconds);
     
-    // 진행률 바 표시
-    printf("[");
-    for (int i = 0; i < 50; i++) {
-        if (i < progress) {
-            printf("=");
-        } else {
-            printf(" ");
-        }
+    if (strlen(current_task) > 0) {
+        printf("현재 작업: %s\n\n", current_task);
     }
-    printf("] %d%%\n\n", (progress * 100) / 50);
     
+    printf("단계: %s\n", phase);
+    printf("남은 시간: %02d:%02d\n", minutes, seconds);
+    
+    // 진행률 표시
+    display_progress(total_seconds - (minutes * 60 + seconds), total_seconds, 50);
+    
+    printf("\n\n");
     printf("p: 일시정지/재개\n");
     printf("q: 종료\n");
     fflush(stdout);
 }
 
 // 세션 기록 저장 함수
-void save_session_record() {
+void save_session_record(const char* phase, int duration) {
     time_t now = time(NULL);
-    struct tm *t = localtime(&now);
-    char filename[256];
-    sprintf(filename, "pomodoro_log_%04d%02d%02d.txt", 
-            t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);
+    struct tm* t = localtime(&now);
+    char filename[32];
+    sprintf(filename, "pomodoro_log_%04d%02d%02d.txt", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);
     
-    FILE *fp = fopen(filename, "a");
-    if (fp) {
-        fprintf(fp, "[%02d:%02d] 세션 %d 완료 - %s (작업 시간: %d분)\n",
-                t->tm_hour, t->tm_min, current_session, current_task, work_time / 60);
-        fclose(fp);
-    }
-}
-
-// 통계 표시 함수
-void show_statistics() {
-    printf("\033[2J\033[H");  // 화면 클리어
-    printf("=== 뽀모도로 통계 ===\n\n");
-    
-    // 오늘의 통계
-    time_t now = time(NULL);
-    struct tm *t = localtime(&now);
-    char filename[256];
-    sprintf(filename, "pomodoro_log_%04d%02d%02d.txt", 
-            t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);
-    
-    FILE *fp = fopen(filename, "r");
-    if (fp) {
-        char line[512];
-        printf("오늘의 작업 기록:\n");
-        printf("----------------\n");
-        while (fgets(line, sizeof(line), fp)) {
-            printf("%s", line);
+    FILE* file = fopen(filename, "a");
+    if (file) {
+        char task_info[120] = "";
+        if (strlen(current_task) > 0) {
+            sprintf(task_info, " (작업: %s)", current_task);
         }
-        fclose(fp);
-    }
-    
-    printf("\n총 작업 시간: %d분\n", total_work_time / 60);
-    printf("완료한 세션 수: %d\n", total_sessions);
-    printf("\nEnter를 눌러 계속...");
-    getchar();
-}
-
-// 설정 표시 함수
-void show_settings() {
-    printf("\033[2J\033[H");  // 화면 클리어
-    printf("=== 뽀모도로 설정 ===\n\n");
-    
-    printf("1. 작업 이름 설정\n");
-    printf("2. 작업 시간 설정 (현재: %d분)\n", work_time / 60);
-    printf("3. 짧은 휴식 시간 설정 (현재: %d분)\n", short_break / 60);
-    printf("4. 긴 휴식 시간 설정 (현재: %d분)\n", long_break / 60);
-    printf("5. 기본값으로 복원\n");
-    printf("0. 돌아가기\n\n");
-    
-    printf("선택: ");
-    int choice;
-    scanf("%d", &choice);
-    getchar();  // 개행 문자 제거
-    
-    switch (choice) {
-        case 1:
-            printf("\n작업 이름: ");
-            fgets(current_task, sizeof(current_task), stdin);
-            current_task[strcspn(current_task, "\n")] = 0;
-            break;
-        case 2:
-            printf("\n작업 시간(분): ");
-            int minutes;
-            scanf("%d", &minutes);
-            work_time = minutes * 60;
-            remaining_time = work_time;
-            break;
-        case 3:
-            printf("\n짧은 휴식 시간(분): ");
-            scanf("%d", &minutes);
-            short_break = minutes * 60;
-            break;
-        case 4:
-            printf("\n긴 휴식 시간(분): ");
-            scanf("%d", &minutes);
-            long_break = minutes * 60;
-            break;
-        case 5:
-            work_time = DEFAULT_WORK_TIME;
-            short_break = DEFAULT_SHORT_BREAK;
-            long_break = DEFAULT_LONG_BREAK;
-            remaining_time = work_time;
-            break;
+        fprintf(file, "[%02d:%02d:%02d] %s 완료%s\n", 
+                t->tm_hour, t->tm_min, t->tm_sec, phase, task_info);
+        fclose(file);
     }
 }
 
 // 타이머 실행 함수
-void start_timer() {
-    set_terminal_mode();
+void run_timer(int duration, const char* phase) {
+    int total_seconds = duration * 60;
+    int remaining_seconds = total_seconds;
+    int paused = 0;
+    time_t start_time = time(NULL);
+    time_t pause_start = 0;
+    int total_pause_time = 0;
     
-    while (1) {
-        display_timer();
+    // 타이머 실행 중에는 ECHO를 끄고
+    struct termios timer_termios;
+    tcgetattr(STDIN_FILENO, &timer_termios);
+    timer_termios.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &timer_termios);
+    
+    while (remaining_seconds > 0) {
+        if (!paused) {
+            time_t current_time = time(NULL);
+            int elapsed = current_time - start_time - total_pause_time;
+            remaining_seconds = total_seconds - elapsed;
+            
+            if (remaining_seconds < 0) remaining_seconds = 0;
+            
+            int minutes = remaining_seconds / 60;
+            int seconds = remaining_seconds % 60;
+            
+            display_timer(minutes, seconds, total_seconds, phase);
+        }
         
         // 키 입력 확인
         if (kbhit()) {
             char key = getchar();
-            if (key == 'p') {
-                is_paused = !is_paused;
-            } else if (key == 'q' && is_paused) {
-                break;
+            if (key == 'p' || key == 'P') {
+                if (!paused) {
+                    paused = 1;
+                    pause_start = time(NULL);
+                    printf("\n일시정지 중... (p를 눌러 재개)\n");
+                } else {
+                    paused = 0;
+                    total_pause_time += time(NULL) - pause_start;
+                }
+            } else if (key == 'q' || key == 'Q') {
+                printf("\n타이머를 종료합니다.\n");
+                // 타이머 종료 시 원래 터미널 설정으로 복원
+                tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
+                return;
             }
         }
         
-        if (!is_paused) {
-            if (remaining_time > 0) {
-                sleep(1);
-                remaining_time--;
-            } else {
-                // 세션 완료
-                total_sessions++;
-                total_work_time += work_time;
-                save_session_record();
-                
-                if (current_session % SESSIONS_BEFORE_LONG_BREAK == 0) {
-                    remaining_time = long_break;
-                    printf("\n긴 휴식 시간입니다! %d분 휴식을 시작합니다.\n", long_break / 60);
-                } else {
-                    remaining_time = short_break;
-                    printf("\n짧은 휴식 시간입니다! %d분 휴식을 시작합니다.\n", short_break / 60);
-                }
-                
-                current_session = (current_session % SESSIONS_BEFORE_LONG_BREAK) + 1;
-                sleep(3);
-            }
-        }
+        usleep(100000);  // 0.1초 대기
     }
     
-    reset_terminal_mode();
+    // 타이머 종료 시 원래 터미널 설정으로 복원
+    tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
+    save_session_record(phase, duration);
 }
 
-int main() {
+// 설정 메뉴 함수
+void settings_menu() {
     while (1) {
-        printf("\033[2J\033[H");  // 화면 클리어
-        printf("=== 뽀모도로 타이머 ===\n\n");
-        printf("1. 타이머 시작\n");
-        printf("2. 설정\n");
-        printf("3. 통계\n");
-        printf("0. 종료\n\n");
-        
+        printf("\033[2J\033[H");  // 화면 지우기
+        printf("=== 설정 ===\n\n");
+        printf("1. 작업 시간 설정 (현재: %d분)\n", work_time);
+        printf("2. 짧은 휴식 시간 설정 (현재: %d분)\n", short_break);
+        printf("3. 긴 휴식 시간 설정 (현재: %d분)\n", long_break);
+        printf("4. 작업 이름 설정 (현재: %s)\n", strlen(current_task) > 0 ? current_task : "없음");
+        printf("5. 기본값으로 복원\n");
+        printf("0. 돌아가기\n\n");
         printf("선택: ");
+        
         int choice;
         scanf("%d", &choice);
         getchar();  // 개행 문자 제거
         
         switch (choice) {
             case 1:
-                start_timer();
+                printf("작업 시간(분): ");
+                scanf("%d", &work_time);
+                getchar();  // 개행 문자 제거
                 break;
             case 2:
-                show_settings();
+                printf("짧은 휴식 시간(분): ");
+                scanf("%d", &short_break);
+                getchar();  // 개행 문자 제거
                 break;
             case 3:
-                show_statistics();
+                printf("긴 휴식 시간(분): ");
+                scanf("%d", &long_break);
+                getchar();  // 개행 문자 제거
+                break;
+            case 4:
+                printf("작업 이름: ");
+                fgets(current_task, sizeof(current_task), stdin);
+                current_task[strcspn(current_task, "\n")] = 0;
+                break;
+            case 5:
+                work_time = WORK_TIME;
+                short_break = SHORT_BREAK;
+                long_break = LONG_BREAK;
+                current_task[0] = '\0';
+                printf("기본값으로 복원되었습니다.\n");
+                sleep(1);
                 break;
             case 0:
-                return 0;
+                return;
         }
     }
+}
+
+// 통계 메뉴 함수
+void statistics_menu() {
+    printf("\033[2J\033[H");  // 화면 지우기
+    printf("=== 통계 ===\n\n");
     
+    time_t now = time(NULL);
+    struct tm* t = localtime(&now);
+    char filename[32];
+    sprintf(filename, "pomodoro_log_%04d%02d%02d.txt", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);
+    
+    FILE* file = fopen(filename, "r");
+    if (file) {
+        char line[256];
+        int total_work_time = 0;
+        int total_breaks = 0;
+        int sessions = 0;
+        
+        while (fgets(line, sizeof(line), file)) {
+            if (strstr(line, "작업") || strstr(line, "Work")) {
+                total_work_time += work_time;
+                sessions++;
+            } else if (strstr(line, "휴식") || strstr(line, "Break")) {
+                total_breaks += (strstr(line, "긴") || strstr(line, "Long")) ? long_break : short_break;
+            }
+        }
+        
+        printf("오늘의 작업 기록:\n");
+        printf("- 완료한 세션: %d개\n", sessions);
+        printf("- 총 작업 시간: %d분\n", total_work_time);
+        printf("- 총 휴식 시간: %d분\n", total_breaks);
+        
+        fclose(file);
+    } else {
+        printf("오늘의 작업 기록이 없습니다.\n");
+    }
+    
+    printf("\nEnter를 눌러 돌아가기...");
+    getchar();
+}
+
+// 메인 메뉴 함수
+void main_menu() {
+    int completed_sessions = 0;
+    
+    while (1) {
+        printf("\033[2J\033[H");  // 화면 지우기
+        printf("=== 뽀모도로 타이머 ===\n\n");
+        printf("1. 타이머 시작\n");
+        printf("2. 설정\n");
+        printf("3. 통계\n");
+        printf("0. 종료\n\n");
+        printf("선택: ");
+        
+        int choice;
+        scanf("%d", &choice);
+        getchar();  // 개행 문자 제거
+        
+        switch (choice) {
+            case 1:
+                run_timer(work_time, "작업");
+                completed_sessions++;
+                
+                if (completed_sessions % sessions_before_long_break == 0) {
+                    run_timer(long_break, "긴 휴식");
+                } else {
+                    run_timer(short_break, "짧은 휴식");
+                }
+                break;
+            case 2:
+                settings_menu();
+                break;
+            case 3:
+                statistics_menu();
+                break;
+            case 0:
+                return;
+        }
+    }
+}
+
+int main() {
+    setlocale(LC_ALL, "ko_KR.UTF-8");
+    init_terminal();
+    main_menu();
+    restore_terminal();
     return 0;
 }
 
