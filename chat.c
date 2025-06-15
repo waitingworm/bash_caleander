@@ -6,9 +6,10 @@
 
 #define MAX_LINE 256
 #define COLOR_RESET "\033[0m"
-#define BORDER_LINE "┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐"
-#define BORDER_LINE2 "└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘"
-#define BORDER_LINE3 "├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤"
+#define BORDER_LINE "┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐"
+#define BORDER_LINE2 "└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘"
+#define BORDER_LINE3 "├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤"
+#define BORDER_LINE4 "│                                                                                                                                                          │"
 
 const char* colors[] = {
     "\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m"
@@ -39,7 +40,8 @@ void add_user_if_new(const char* nickname) {
 
 void print_user_list() {
     printf("\n%s\n", BORDER_LINE);
-    printf("│                                                                       👥  현재 채팅방 참여자 목록                                                                     │\n");
+    printf("%s\n", BORDER_LINE4);
+    printf("│                                                                      👥  현재 채팅방 참여자 목록                                                                     │\n");
     printf("%s\n", BORDER_LINE3);
     for (int i = 0; i < user_count; i++) {
         printf("│ - %s%s%s\n", get_color(user_list[i]), user_list[i], COLOR_RESET);
@@ -49,7 +51,8 @@ void print_user_list() {
 
 void print_help() {
     printf("\n%s\n", BORDER_LINE);
-    printf("│                                                                       📋  사용 가능한 명령어                                                                          │\n");
+    printf("%s\n", BORDER_LINE4);
+    printf("│                                                                      📋  사용 가능한 명령어                                                                          │\n");
     printf("%s\n", BORDER_LINE3);
     printf("│ send   - 메시지 전송\n");
     printf("│ read   - 채팅 기록 보기\n");
@@ -70,7 +73,8 @@ void print_ui_header(const char* nickname) {
     strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", t);
     
     printf("\n%s\n", BORDER_LINE);
-    printf("│                                                                       💬  터미널 채팅                                                                                │\n");
+    printf("%s\n", BORDER_LINE4);
+    printf("│                                                                      💬  터미널 채팅                                                                                │\n");
     printf("%s\n", BORDER_LINE3);
     printf("│ 사용자: %s%s%s\n", get_color(nickname), nickname, COLOR_RESET);
     printf("│ 현재 시간: %s\n", timestr);
@@ -98,7 +102,8 @@ void receive_message(const char* nickname, const char* message) {
 void read_messages() {
     new_message_flag = 0;
     printf("\n%s\n", BORDER_LINE);
-    printf("│                                                                       📜  채팅 기록                                                                                   │\n");
+    printf("%s\n", BORDER_LINE4);
+    printf("│                                                                      📜  채팅 기록                                                                                   │\n");
     printf("%s\n", BORDER_LINE3);
     FILE* chat_log = fopen(chat_filename, "r");
     if (chat_log) {
@@ -180,7 +185,8 @@ void select_chat_room() {
 
     while (1) {
         printf("\n%s\n", BORDER_LINE);
-        printf("│                                                                       🏠  채팅방 선택                                                                              │\n");
+        printf("%s\n", BORDER_LINE4);
+        printf("│                                                                      🏠  채팅방 선택                                                                              │\n");
         printf("%s\n", BORDER_LINE3);
         printf("│ 1) 전기공학\n");
         printf("│ 2) 전자공학\n");
@@ -225,7 +231,8 @@ int main(int argc, char* argv[]) {
     print_help();
     char command[64], nickname[32], message[128], keyword[64];
     printf("\n%s\n", BORDER_LINE);
-    printf("│                                                                       👋  환영합니다!                                                                                 │\n");
+    printf("%s\n", BORDER_LINE4);
+    printf("│                                                                      👋  환영합니다!                                                                                 │\n");
     printf("%s\n", BORDER_LINE3);
     printf("│ 닉네임 입력: "); scanf("%s", nickname); getchar();
     add_user_if_new(nickname);
@@ -236,7 +243,8 @@ int main(int argc, char* argv[]) {
 
     while (1) {
         printf("\n%s\n", BORDER_LINE);
-        printf("│                                                                       💬  터미널 채팅                                                                                │\n");
+        printf("%s\n", BORDER_LINE4);
+        printf("│                                                                      💬  터미널 채팅                                                                                │\n");
         printf("%s\n", BORDER_LINE3);
         print_ui_header(nickname);
         check_new_message_alert();
@@ -271,7 +279,8 @@ int main(int argc, char* argv[]) {
             print_help();
         } else if (strcmp(command, "exit") == 0) {
             printf("\n%s\n", BORDER_LINE);
-            printf("│                                                                       👋  채팅을 종료합니다                                                                       │\n");
+            printf("%s\n", BORDER_LINE4);
+            printf("│                                                                      👋  채팅을 종료합니다                                                                       │\n");
             printf("%s\n", BORDER_LINE2);
             break;
         } else {
