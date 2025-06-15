@@ -156,7 +156,7 @@ void truncate_to_width(const char *src, char *dest, int max_width) {
 
 // 첫 번째 일정 제목 가져오기 (정렬된 순서로)
 void get_first_schedule(int year, int month, int day, char *title) {
-    if (title == NULL) return;	// title이 NULL이 아닌지 확
+    if (title == NULL) return;	// title이 NULL이 아닌지 확인
     
     FILE *file = fopen("schedules.txt", "r");
     if (!file) {
@@ -244,103 +244,52 @@ void print_calendar(int year, int month) {
     int header_spaces = (total_width - 2 - header_width) / 2;
     for (int i = 0; i < header_spaces; i++) printf(" ");
     printf("%s", header);
-    for (int i = 0; i < total_width - 2 - header_spaces - header_width; i++) printf(" ");
+    for (int i = 0; i < total_width - 2 - header_width - header_spaces; i++) printf(" ");
     printf("│\n");
 
     // 요일 헤더
-    printf("├");
-    for (int i = 0; i < total_width - 2; i++) printf("─");
-    printf("┤\n");
-
     printf("│");
-    printf("%s", COLOR_RED);  print_fixed_cell("       일");  printf("%s", COLOR_RESET); printf("│");
-                              print_fixed_cell("       월");  printf("│");
-                              print_fixed_cell("       화");  printf("│");
-                              print_fixed_cell("       수");  printf("│");
-                              print_fixed_cell("       목");  printf("│");
-                              print_fixed_cell("       금");  printf("│");
-    printf("%s", COLOR_BLUE); print_fixed_cell("       토");  printf("%s", COLOR_RESET); printf("│\n");
-
-    // 요일 구분선
-    printf("├");
-    for (int col = 0; col < 7; col++) {
-        for (int i = 0; i < CELL_WIDTH; i++) printf("─");
-        if (col < 6) printf("┼");
+    for (int i = 0; i < 7; i++) {
+        const char *weekdays[] = {"일", "월", "화", "수", "목", "금", "토"};
+        printf(" %s", i == 0 ? COLOR_RED : (i == 6 ? COLOR_BLUE : ""));
+        print_fixed_cell(weekdays[i]);
+        printf("%s", i == 0 || i == 6 ? COLOR_RESET : "");
     }
-    printf("┤\n");
+    printf("│\n");
 
-    // 캘린더 본체 출력
-    for (int week = 0; week < 6; week++) {
+    // 날짜 출력
+    int day = 1;
+    for (int i = 0; i < 6; i++) {
         printf("│");
-        for (int weekday = 0; weekday < 7; weekday++) {
-            int cell_day = week * 7 + weekday - first_day + 1;
-            if (cell_day < 1 || cell_day > days) {
+        for (int j = 0; j < 7; j++) {
+            if (i == 0 && j < first_day) {
                 print_fixed_cell("");
-            } else {
-                char day_str[30];  // 크기를 20에서 30으로 증가
-                if (year == today_year && month == today_month && cell_day == today_day) {
-                    sprintf(day_str, "       ●%2d      ", cell_day);
-                    printf("%s%s%s", COLOR_BG_WHITE, day_str, COLOR_RESET);
-                    int remaining = CELL_WIDTH - 16;
-                    for (int i = 0; i < remaining; i++) printf(" ");
-                } else if (weekday == 0) {
-                    sprintf(day_str, "       %2d", cell_day);
-                    printf("%s%s%s", COLOR_RED, day_str, COLOR_RESET);
-                    int remaining = CELL_WIDTH - 9;
-                    for (int i = 0; i < remaining; i++) printf(" ");
-                } else if (weekday == 6) {
-                    sprintf(day_str, "       %2d", cell_day);
-                    printf("%s%s%s", COLOR_BLUE, day_str, COLOR_RESET);
-                    int remaining = CELL_WIDTH - 9;
-                    for (int i = 0; i < remaining; i++) printf(" ");
-                } else {
-                    sprintf(day_str, "       %2d", cell_day);
-                    print_fixed_cell(day_str);
-                }
-            }
-            if (weekday < 6) printf("│");
-        }
-        printf("│\n");
-    
+            } else if (day <= days) {
+                char cell_content[CELL_WIDTH];
+                char schedule_title[50];
+                get_first_schedule(year, month, day, schedule_title);
 
-        // 일정 줄
-        printf("│");
-        for (int weekday = 0; weekday < 7; weekday++) {
-            int cell_day = week * 7 + weekday - first_day + 1;
-            if (cell_day >= 1 && cell_day <= days) {
-                char title[50];
-                get_first_schedule(year, month, cell_day, title);
-                if (strlen(title) > 0) {
-                    char formatted_title[60];
-                    sprintf(formatted_title, "  %s", title);
-                    print_fixed_cell(formatted_title);
-                } else {
-                    print_fixed_cell("");
+                if (year == today_year && month == today_month && day == today_day) {
+                    printf("%s", COLOR_BG_WHITE);
                 }
+
+                if (j == 0) printf("%s", COLOR_RED);
+                else if (j == 6) printf("%s", COLOR_BLUE);
+
+                sprintf(cell_content, "%2d", day);
+                if (schedule_title[0] != '\0') {
+                    strcat(cell_content, " ");
+                    strcat(cell_content, schedule_title);
+                }
+                print_fixed_cell(cell_content);
+
+                printf("%s", COLOR_RESET);
+                day++;
             } else {
                 print_fixed_cell("");
             }
-            if (weekday < 6) printf("│");
         }
         printf("│\n");
-
-        // 빈 줄
-        printf("│");
-        for (int weekday = 0; weekday < 7; weekday++) {
-            print_fixed_cell("");
-            if (weekday < 6) printf("│");
-        }
-        printf("│\n");
-
-        // 줄 구분선
-        if (week < 5) {
-            printf("├");
-            for (int col = 0; col < 7; col++) {
-                for (int i = 0; i < CELL_WIDTH; i++) printf("─");
-                if (col < 6) printf("┼");
-            }
-            printf("┤\n");
-        }
     }
 
     // 하단 테두리

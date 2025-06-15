@@ -216,15 +216,6 @@ void delete_all_schedules_on_date(int year, int month, int day) {
         printf("- %s\n", schedules[i]);
     }
     
-    printf("\n총 %d개의 일정을 삭제하시겠습니까? (y/N): ", count);
-    char confirm;
-    scanf(" %c", &confirm);
-    
-    if (confirm != 'y' && confirm != 'Y') {
-        printf("삭제가 취소되었습니다.\n");
-        return;
-    }
-    
     // 실제 삭제 수행
     file = fopen(SCHEDULE_FILE, "r");
     FILE *temp = fopen("temp.txt", "w");
@@ -252,14 +243,10 @@ void delete_all_schedules_on_date(int year, int month, int day) {
     fclose(file);
     fclose(temp);
     
-    if (deleted_count > 0) {
-        remove(SCHEDULE_FILE);
-        rename("temp.txt", SCHEDULE_FILE);
-        printf("%d개의 일정이 삭제되었습니다.\n", deleted_count);
-    } else {
-        remove("temp.txt");
-        printf("삭제할 일정이 없습니다.\n");
-    }
+    remove(SCHEDULE_FILE);
+    rename("temp.txt", SCHEDULE_FILE);
+    
+    printf("\n총 %d개의 일정이 삭제되었습니다.\n", deleted_count);
 }
 
 // 개별 일정 삭제
