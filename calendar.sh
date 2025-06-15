@@ -138,13 +138,25 @@ EOF
 	fi
     
     	# 캘린더와 메뉴를 좌우로 배치
-	paste -d ' ' /tmp/calendar_output.txt /tmp/menu_box.txt
+	# paste 명령어 대신 직접 정렬하여 출력
+	{
+		# 캘린더 출력
+		while IFS= read -r calendar_line; do
+			# 메뉴 박스의 해당 라인 읽기
+			read -r menu_line < /tmp/menu_box.txt
+			# 두 라인을 공백으로 구분하여 출력
+			printf "%s %s\n" "$calendar_line" "$menu_line"
+		done < /tmp/calendar_output.txt
+	} > /tmp/combined_output.txt
+    
+	# 최종 출력
+	cat /tmp/combined_output.txt
     
 	echo
 	echo -e "${WHITE}현재: ${BOLD}${CURRENT_YEAR}년 ${CURRENT_MONTH}월${RESET}                                                      선택하세요 (0-9): \c"
 
 	# 임시 파일 정리
-	rm -f /tmp/calendar_output.txt /tmp/menu_box.txt
+	rm -f /tmp/calendar_output.txt /tmp/menu_box.txt /tmp/combined_output.txt
 }
 
 # ========== 숫자 검증 함수 ==========
