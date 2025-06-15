@@ -222,80 +222,57 @@ void print_fixed_cell(const char *content) {
 
 // 캘린더 메인 출력 함수
 void print_calendar(int year, int month) {
-    setlocale(LC_ALL, "ko_KR.UTF-8");
+    char month_year_str[100];
+    // 제목 포매팅을 좀 더 정확하게 수정하여 가운데 정렬 느낌을 줍니다.
+    sprintf(month_year_str, "                                     %d년 %d월", year, month);
 
-    int today_year, today_month, today_day;
-    get_today(&today_year, &today_month, &today_day);
-
-    int days = days_in_month(year, month);
-    int first_day = get_day_of_week(year, month, 1);
-    int total_width = TOTAL_CELLS * CELL_WIDTH + BORDER_COUNT;
-
-    // 상단 테두리
-    printf("┌");
-    for (int i = 0; i < total_width - 2; i++) printf("─");
-    printf("┐\n");
-
-    // 헤더 (년월)
-    printf("│");
-    char header[20];
-    sprintf(header, "%d년 %d월", year, month);
-    int header_width = get_string_width(header);
-    int header_spaces = (total_width - 2 - header_width) / 2;
-    for (int i = 0; i < header_spaces; i++) printf(" ");
-    printf("%s", header);
-    for (int i = 0; i < total_width - 2 - header_width - header_spaces; i++) printf(" ");
-    printf("│\n");
-
-    // 요일 헤더
-    printf("│");
-    for (int i = 0; i < 7; i++) {
-        const char *weekdays[] = {"일", "월", "화", "수", "목", "금", "토"};
-        printf(" %s", i == 0 ? COLOR_RED : (i == 6 ? COLOR_BLUE : ""));
-        print_fixed_cell(weekdays[i]);
-        printf("%s", i == 0 || i == 6 ? COLOR_RESET : "");
+    int days_in_month[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    if (is_leap_year(year)) {
+        days_in_month[2] = 29;
     }
-    printf("│\n");
+
+    // 달력의 각 라인 길이를 정확히 맞춥니다.
+    printf("┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐\n");
+    printf("│ %-118s │\n", month_year_str);
+    printf("│ %-118s │\n", "일         월         화         수         목         금         토");
+
+    int first_day = get_day_of_week(year, month, 1);
+    int num_days = days_in_month[month];
+    
+    // 빈 줄을 채워 높이를 고정합니다. (총 6주 분량의 라인을 확보)
+    int line_count = 0;
+
+    // 첫째 날 시작 위치 맞추기
+    for (int i = 0; i < first_day; i++) {
+        printf("           ");
+    }
 
     // 날짜 출력
-    int day = 1;
-    for (int i = 0; i < 6; i++) {
-        printf("│");
-        for (int j = 0; j < 7; j++) {
-            if (i == 0 && j < first_day) {
-                print_fixed_cell("");
-            } else if (day <= days) {
-                char cell_content[CELL_WIDTH];
-                char schedule_title[50];
-                get_first_schedule(year, month, day, schedule_title);
-
-                if (year == today_year && month == today_month && day == today_day) {
-                    printf("%s", COLOR_BG_WHITE);
-                }
-
-                if (j == 0) printf("%s", COLOR_RED);
-                else if (j == 6) printf("%s", COLOR_BLUE);
-
-                sprintf(cell_content, "%2d", day);
-                if (schedule_title[0] != '\0') {
-                    strcat(cell_content, " ");
-                    strcat(cell_content, schedule_title);
-                }
-                print_fixed_cell(cell_content);
-
-                printf("%s", COLOR_RESET);
-                day++;
-            } else {
-                print_fixed_cell("");
-            }
+    for (int day = 1; day <= num_days; day++) {
+        printf("%-11d", day);
+        if ((first_day + day) % 7 == 0) {
+            printf("│\n"); // 토요일 뒤에는 파이프 문자와 줄바꿈
+            line_count++;
         }
-        printf("│\n");
     }
 
-    // 하단 테두리
-    printf("└");
-    for (int i = 0; i < total_width - 2; i++) printf("─");
-    printf("┘\n");
+    // 마지막 주가 토요일로 끝나지 않은 경우, 남은 칸을 채우고 마무리
+    int total_cells = first_day + num_days;
+    if (total_cells % 7 != 0) {
+        for (int i = 0; i < (7 - (total_cells % 7)); i++) {
+            printf("           ");
+        }
+        printf("│\n");
+        line_count++;
+    }
+
+    // 달력이 6줄이 안되면, 빈 줄을 추가하여 높이를 맞춤
+    while (line_count < 6) {
+        printf("                                                                                                                       │\n");
+        line_count++;
+    }
+
+    printf("└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘\n");
 }
 
 
@@ -317,4 +294,5 @@ int main(int argc, char *argv[]) {
     
     print_calendar(year, month);
     return 0;
+}
 }
