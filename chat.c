@@ -6,7 +6,9 @@
 
 #define MAX_LINE 256
 #define COLOR_RESET "\033[0m"
-#define BORDER_LINE "==============================================="
+#define BORDER_LINE "┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐"
+#define BORDER_LINE2 "└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘"
+#define BORDER_LINE3 "├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤"
 
 const char* colors[] = {
     "\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m"
@@ -36,15 +38,29 @@ void add_user_if_new(const char* nickname) {
 }
 
 void print_user_list() {
-    printf("\n[현재 채팅방 참여자 목록]\n");
+    printf("\n%s\n", BORDER_LINE);
+    printf("│                                                                       👥  현재 채팅방 참여자 목록                                                                     │\n");
+    printf("%s\n", BORDER_LINE3);
     for (int i = 0; i < user_count; i++) {
-        printf("- %s\n", user_list[i]);
+        printf("│ - %s%s%s\n", get_color(user_list[i]), user_list[i], COLOR_RESET);
     }
+    printf("%s\n", BORDER_LINE2);
 }
 
 void print_help() {
-    printf("\n== 사용 가능한 명령어 안내 ==\n");
-    printf(" send / read / upload / search / tagsearch / tags / delete / change / users / help / exit\n");
+    printf("\n%s\n", BORDER_LINE);
+    printf("│                                                                       📋  사용 가능한 명령어                                                                          │\n");
+    printf("%s\n", BORDER_LINE3);
+    printf("│ send   - 메시지 전송\n");
+    printf("│ read   - 채팅 기록 보기\n");
+    printf("│ upload - 파일 업로드\n");
+    printf("│ search - 파일 검색\n");
+    printf("│ tagsearch - 태그로 검색\n");
+    printf("│ change - 채팅방 변경\n");
+    printf("│ users  - 참여자 목록\n");
+    printf("│ help   - 도움말\n");
+    printf("│ exit   - 종료\n");
+    printf("%s\n", BORDER_LINE2);
 }
 
 void print_ui_header(const char* nickname) {
@@ -52,8 +68,14 @@ void print_ui_header(const char* nickname) {
     struct tm* t = localtime(&now);
     char timestr[64];
     strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", t);
-    printf("\n%s\n사용자: %s%s%s\n현재 시간: %s\n현재 채팅방: %s (%s)\n%s\n",
-           BORDER_LINE, get_color(nickname), nickname, COLOR_RESET, timestr, chat_roomname, chat_filename, BORDER_LINE);
+    
+    printf("\n%s\n", BORDER_LINE);
+    printf("│                                                                       💬  터미널 채팅                                                                                │\n");
+    printf("%s\n", BORDER_LINE3);
+    printf("│ 사용자: %s%s%s\n", get_color(nickname), nickname, COLOR_RESET);
+    printf("│ 현재 시간: %s\n", timestr);
+    printf("│ 현재 채팅방: %s (%s)\n", chat_roomname, chat_filename);
+    printf("%s\n", BORDER_LINE3);
 }
 
 void receive_message(const char* nickname, const char* message) {
@@ -63,7 +85,8 @@ void receive_message(const char* nickname, const char* message) {
     char timestr[64];
     strftime(timestr, sizeof(timestr), "%H:%M:%S", t);
 
-    printf("[%s] %s%s%s: %s\n", timestr, get_color(nickname), nickname, COLOR_RESET, message);
+    printf("%s\n", BORDER_LINE3);
+    printf("│ [%s] %s%s%s: %s\n", timestr, get_color(nickname), nickname, COLOR_RESET, message);
 
     FILE* chat_log = fopen(chat_filename, "a");
     if (chat_log) {
@@ -74,22 +97,26 @@ void receive_message(const char* nickname, const char* message) {
 
 void read_messages() {
     new_message_flag = 0;
-    printf("\n[채팅 기록]\n");
+    printf("\n%s\n", BORDER_LINE);
+    printf("│                                                                       📜  채팅 기록                                                                                   │\n");
+    printf("%s\n", BORDER_LINE3);
     FILE* chat_log = fopen(chat_filename, "r");
     if (chat_log) {
         char line[MAX_LINE];
         while (fgets(line, sizeof(line), chat_log)) {
-            printf("%s", line);
+            printf("│ %s", line);
         }
         fclose(chat_log);
     } else {
-        printf("(채팅 기록이 없습니다)\n");
+        printf("│ (채팅 기록이 없습니다)\n");
     }
+    printf("%s\n", BORDER_LINE2);
 }
 
 void check_new_message_alert() {
     if (new_message_flag) {
-        printf("\n🔔 [알림] 새로운 메시지가 도착했습니다!\n");
+        printf("\n%s\n", BORDER_LINE3);
+        printf("│ 🔔 [알림] 새로운 메시지가 도착했습니다!\n");
     }
 }
 
@@ -152,10 +179,18 @@ void select_chat_room() {
     char input[32];
 
     while (1) {
-        printf("\n[채팅방 선택]\n1) 전기공학\n2) 전자공학\n3) 시스템공학\n4) 새 채팅방 만들기\n선택: ");
+        printf("\n%s\n", BORDER_LINE);
+        printf("│                                                                       🏠  채팅방 선택                                                                              │\n");
+        printf("%s\n", BORDER_LINE3);
+        printf("│ 1) 전기공학\n");
+        printf("│ 2) 전자공학\n");
+        printf("│ 3) 시스템공학\n");
+        printf("│ 4) 새 채팅방 만들기\n");
+        printf("%s\n", BORDER_LINE3);
+        printf("│ 선택: ");
         fgets(input, sizeof(input), stdin);
         if (sscanf(input, "%d", &room) != 1) {
-            printf("잘못된 입력입니다. 숫자를 입력하세요.\n");
+            printf("│ 잘못된 입력입니다. 숫자를 입력하세요.\n");
             continue;
         }
 
@@ -169,15 +204,16 @@ void select_chat_room() {
             strcpy(chat_filename, "chat_sys.txt");
             strcpy(chat_roomname, "시스템공학");
         } else if (room == 4) {
-            printf("새 채팅방 이름 입력: ");
+            printf("│ 새 채팅방 이름 입력: ");
             scanf("%s", roomname); getchar();
             snprintf(chat_filename, sizeof(chat_filename), "chat_%s.txt", roomname);
             snprintf(chat_roomname, sizeof(chat_roomname), "%s", roomname);
-            printf("'%s' 채팅방에 입장합니다.\n", roomname);
+            printf("│ '%s' 채팅방에 입장합니다.\n", roomname);
         } else {
-            printf("잘못된 선택입니다. 1~4 중에서 선택하세요.\n");
+            printf("│ 잘못된 선택입니다. 1~4 중에서 선택하세요.\n");
             continue;
         }
+        printf("%s\n", BORDER_LINE2);
         break;
     }
 }
@@ -188,7 +224,10 @@ int main(int argc, char* argv[]) {
 
     print_help();
     char command[64], nickname[32], message[128], keyword[64];
-    printf("\n환영합니다! 닉네임 입력: "); scanf("%s", nickname); getchar();
+    printf("\n%s\n", BORDER_LINE);
+    printf("│                                                                       👋  환영합니다!                                                                                 │\n");
+    printf("%s\n", BORDER_LINE3);
+    printf("│ 닉네임 입력: "); scanf("%s", nickname); getchar();
     add_user_if_new(nickname);
 
     while (strlen(chat_roomname) == 0) {
@@ -196,15 +235,17 @@ int main(int argc, char* argv[]) {
     }
 
     while (1) {
-        printf("\n(채팅방 변경은 'change')\n");
+        printf("\n%s\n", BORDER_LINE);
+        printf("│                                                                       💬  터미널 채팅                                                                                │\n");
+        printf("%s\n", BORDER_LINE3);
         print_ui_header(nickname);
         check_new_message_alert();
-        printf("명령어 입력: ");
+        printf("│ 명령어 입력: ");
         fgets(command, sizeof(command), stdin);
         command[strcspn(command, "\n")] = 0;
 
         if (strcmp(command, "send") == 0) {
-            printf("메시지: ");
+            printf("│ 메시지: ");
             fgets(message, sizeof(message), stdin);
             message[strcspn(message, "\n")] = 0;
             receive_message(nickname, message);
@@ -213,12 +254,12 @@ int main(int argc, char* argv[]) {
         } else if (strcmp(command, "upload") == 0) {
             upload_file(nickname);
         } else if (strcmp(command, "search") == 0) {
-            printf("검색어: ");
+            printf("│ 검색어: ");
             fgets(keyword, sizeof(keyword), stdin);
             keyword[strcspn(keyword, "\n")] = 0;
             search_file(keyword);
         } else if (strcmp(command, "tagsearch") == 0) {
-            printf("태그: ");
+            printf("│ 태그: ");
             fgets(keyword, sizeof(keyword), stdin);
             keyword[strcspn(keyword, "\n")] = 0;
             tag_search_file(keyword);
@@ -229,10 +270,12 @@ int main(int argc, char* argv[]) {
         } else if (strcmp(command, "help") == 0) {
             print_help();
         } else if (strcmp(command, "exit") == 0) {
-            printf("채팅을 종료합니다.\n");
+            printf("\n%s\n", BORDER_LINE);
+            printf("│                                                                       👋  채팅을 종료합니다                                                                       │\n");
+            printf("%s\n", BORDER_LINE2);
             break;
         } else {
-            printf("알 수 없는 명령어입니다. 'help'를 입력하여 사용 가능한 명령어를 확인하세요.\n");
+            printf("│ 알 수 없는 명령어입니다. 'help'를 입력하여 사용 가능한 명령어를 확인하세요.\n");
         }
     }
 
