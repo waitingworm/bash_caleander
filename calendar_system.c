@@ -295,4 +295,3 @@ int main(int argc, char *argv[]) {
     print_calendar(year, month);
     return 0;
 }
-}
