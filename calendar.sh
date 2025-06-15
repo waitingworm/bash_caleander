@@ -1,3 +1,6 @@
+#!/bin/bash
+
+# [calendar.sh 수정본2.txt 기반 코드 시작]
 # ========== 색상 및 전역 변수 설정 ==========
 RED='\033[31m'
 GREEN='\033[32m'
@@ -27,7 +30,9 @@ check_programs() {
 		exit 1
 	fi
 }
+# [calendar.sh 수정본2.txt 기반 코드 종료]
 
+# [calendar.sh 수정본2.txt 기반 코드 시작]
 # ========== 화면 출력 함수들 ==========
 
 # 메인 화면 출력
@@ -46,7 +51,7 @@ show_main_screen() {
 	# 우측 메뉴 박스 생성
 	cat > /tmp/menu_box.txt << 'EOF'
 ┌──────────────────────────────────────┐
-│            이번 달 일정              │
+│              이번 달 일정            │
 ├──────────────────────────────────────┤
 │                                      │
 │                                      │
@@ -57,7 +62,7 @@ show_main_screen() {
 │                                      │
 │                                      │
 ├──────────────────────────────────────┤
-│                메뉴                  │
+│                  메뉴                │
 ├──────────────────────────────────────┤
 │  1. ➕ 일정 추가                     │
 │  2. 📋 이번 달 모든 일정 보기        │
@@ -66,8 +71,8 @@ show_main_screen() {
 │  5. ⬅️  이전 달                       │
 │  6. ➡️  다음 달                       │
 │  7. 📅 특정 달로 이동                │
-│  8. 💬 채팅 시스템                   │
-│  9. ⏱️ 뽀모도로 타이머               │
+│  8. 🔧 추가기능 1                    │
+│  9. 🔧 추가기능 2                    │
 │  0. 🚪 종료                          │
 └──────────────────────────────────────┘
 EOF
@@ -93,10 +98,12 @@ EOF
 	
 					# 38자 길이로 맞추기 (한글 고려하여 간단하게 처리)
 					if [ ${#FORMATTED_LINE} -gt 36 ]; then
-						FORMATTED_LINE=$(echo "$FORMATTED_LINE" | cut -c1-33)"..."
+						FORMATTED_LINE=$(echo "$FORMATTED_LINE" | cut -c1-33)...
 					fi
                     
 					# 남은 공간을 공백으로 채우기
+					# 화면 너비를 정확히 계산
+					# 가-힣 : 문자 너비 2, 이모티콘 : 문자 너비 2, 영문/숫자/기호 : 문자 너비 1 -> 캘린더 레이아웃 유지를 위해 설
 					REAL_WIDTH=$(echo "$FORMATTED_LINE" | awk 'BEGIN{w=0} {for(i=1;i<=length($0);i++){c=substr($0,i,1); w+=(c ~ /[가-힣🀄-🧿]/ ? 2 : 1)}} END{print w}')
 					SPACES_NEEDED=$((38 - REAL_WIDTH))
 					PADDING=""
@@ -139,9 +146,9 @@ EOF
     
     	# 캘린더와 메뉴를 좌우로 배치
 	paste -d ' ' /tmp/calendar_output.txt /tmp/menu_box.txt
-    
+	    
 	echo
-	echo -e "${WHITE}현재: ${BOLD}${CURRENT_YEAR}년 ${CURRENT_MONTH}월${RESET}                                                      선택하세요 (0-9): \c"
+	echo -e "${WHITE}현재: ${BOLD}${CURRENT_YEAR}년 ${CURRENT_MONTH}월${RESET}                                                      선택하세요 (0-7): \c"
 
 	# 임시 파일 정리
 	rm -f /tmp/calendar_output.txt /tmp/menu_box.txt
@@ -305,6 +312,7 @@ goto_month() {
         echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"; read
     fi
 }
+# [calendar.sh 수정본2.txt 기반 코드 종료]
 
 # [message (1).txt 통합을 위해 추가된 코드 시작]
 # ========== 추가 기능 함수들 ==========
@@ -322,7 +330,9 @@ run_chat_system() {
 run_pomodoro_timer() {
     $PROGRAM_DIR/pomodoro_timer
 }
+# [message (1).txt 통합을 위해 추가된 코드 종료]
 
+# [calendar.sh 수정본2.txt 기반 코드 시작]
 # 추가기능 2 (미구현)
 additional_feature_2() {
     echo
@@ -365,3 +375,4 @@ main_loop() {
 # ========== 프로그램 시작 ==========
 check_programs
 main_loop
+# [calendar.sh 수정본2.txt 기반 코드 종료]
