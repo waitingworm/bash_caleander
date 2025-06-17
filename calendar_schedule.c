@@ -243,55 +243,13 @@ void delete_all_schedules_on_date(int year, int month, int day) {
     fclose(file);
     fclose(temp);
     
-    remove(SCHEDULE_FILE);
-    rename("temp.txt", SCHEDULE_FILE);
-    
-    printf("\n총 %d개의 일정이 삭제되었습니다.\n", deleted_count);
-}
-
-// 개별 일정 삭제
-void delete_schedule(int year, int month, int day, const char* title) {
-    FILE *file = fopen(SCHEDULE_FILE, "r");
-    if (!file) {
-        printf("일정 파일이 없습니다.\n");
-        return;
-    }
-    
-    FILE *temp = fopen("temp.txt", "w");
-    if (!temp) {
-        fclose(file);
-        printf("임시 파일을 생성할 수 없습니다.\n");
-        return;
-    }
-    
-    char line[200];
-    int deleted = 0;
-    
-    while (fgets(line, sizeof(line), file)) {
-        int s_year, s_month, s_day;
-        char s_title[50];
-        
-        if (sscanf(line, "%d,%d,%d,%49[^\r\n]", &s_year, &s_month, &s_day, s_title) == 4) {
-            if (!(s_year == year && s_month == month && s_day == day && my_strcmp(s_title, title) == 0)) {
-                fprintf(temp, "%s", line);
-            } else {
-                deleted = 1;
-            }
-        } else {
-            fprintf(temp, "%s", line);
-        }
-    }
-    
-    fclose(file);
-    fclose(temp);
-    
-    if (deleted) {
+    if (deleted_count > 0) {
         remove(SCHEDULE_FILE);
         rename("temp.txt", SCHEDULE_FILE);
-        printf("일정이 삭제되었습니다: %d년 %d월 %d일 - %s\n", year, month, day, title);
+        printf("%d개의 일정이 삭제되었습니다.\n", deleted_count);
     } else {
         remove("temp.txt");
-        printf("해당 일정을 찾을 수 없습니다.\n");
+        printf("삭제할 일정이 없습니다.\n");
     }
 }
 
@@ -299,49 +257,47 @@ void delete_schedule(int year, int month, int day, const char* title) {
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        printf("사용법: %s [명령] [인자들]\n", argv[0]);
+        printf("사용법: %s <명령> [인자들...]\n", argv[0]);
         printf("명령:\n");
-        printf("  add [년] [월] [일] [제목]  - 일정 추가\n");
-        printf("  show [년] [월]            - 월별 일정 보기\n");
-        printf("  day [년] [월] [일]        - 특정 날짜 일정 보기\n");
-        printf("  delete [년] [월] [일]     - 날짜별 일정 삭제\n");
-        printf("  remove [년] [월] [일] [제목] - 개별 일정 삭제\n");
+        printf("  add <년> <월> <일> <제목>  - 일정 추가\n");
+        printf("  show <년> <월>            - 월별 일정 보기\n");
+        printf("  day <년> <월> <일>        - 특정 날짜 일정 보기\n");
+        printf("  delete <년> <월> <일>     - 날짜별 모든 일정 삭제\n");
         return 1;
     }
     
-    if (my_strcmp(argv[1], "add") == 0 && argc >= 6) {
-        int year = atoi(argv[2]);
-        int month = atoi(argv[3]);
-        int day = atoi(argv[4]);
-        add_schedule(year, month, day, argv[5]);
-    }
-    else if (my_strcmp(argv[1], "show") == 0 && argc >= 4) {
-        int year = atoi(argv[2]);
-        int month = atoi(argv[3]);
+    char *command = argv[1];
+    int year, month, day;
+    char title[50];
+
+    if (my_strcmp(command, "add") == 0 && argc >= 6) {
+        year = atoi(argv[2]);
+        month = atoi(argv[3]);
+        day = atoi(argv[4]);
+        my_safe_strcpy(title, argv[5], 50);
+        add_schedule(year, month, day, title);
+    } 
+    else if (my_strcmp(command, "show") == 0 && argc >= 4) {
+        year = atoi(argv[2]);
+        month = atoi(argv[3]);
         show_month_schedules(year, month);
-    }
-    else if (my_strcmp(argv[1], "day") == 0 && argc >= 5) {
-        int year = atoi(argv[2]);
-        int month = atoi(argv[3]);
-        int day = atoi(argv[4]);
+    } 
+    else if (my_strcmp(command, "day") == 0 && argc >= 5) {
+        year = atoi(argv[2]);
+        month = atoi(argv[3]);
+        day = atoi(argv[4]);
         show_day_schedules(year, month, day);
-    }
-    else if (my_strcmp(argv[1], "delete") == 0 && argc >= 5) {
-        int year = atoi(argv[2]);
-        int month = atoi(argv[3]);
-        int day = atoi(argv[4]);
+    } 
+    else if (my_strcmp(command, "delete") == 0 && argc >= 5) {
+        year = atoi(argv[2]);
+        month = atoi(argv[3]);
+        day = atoi(argv[4]);
         delete_all_schedules_on_date(year, month, day);
-    }
-    else if (my_strcmp(argv[1], "remove") == 0 && argc >= 6) {
-        int year = atoi(argv[2]);
-        int month = atoi(argv[3]);
-        int day = atoi(argv[4]);
-        delete_schedule(year, month, day, argv[5]);
-    }
+    } 
     else {
-        printf("잘못된 명령입니다.\n");
+        printf("알 수 없는 명령입니다: %s\n", command);
         return 1;
     }
-    
+
     return 0;
 }

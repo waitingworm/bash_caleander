@@ -2,7 +2,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c99 -O2
 
-# 실행 파일 (terminal_chat, pomodoro_timer 추가)
+# 실행 파일
 TARGETS = calendar_system calendar_schedule terminal_chat pomodoro_timer
 
 # 기본 빌드

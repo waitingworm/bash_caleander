@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # [calendar.sh 수정본2.txt 기반 코드 시작]
 # ========== 색상 및 전역 변수 설정 ==========
@@ -72,7 +72,7 @@ show_main_screen() {
 │  6. ➡️  다음 달                       │
 │  7. 📅 특정 달로 이동                │
 │  8. 💬 터미널 채팅                   │
-│  9. ⏱️  뽀모도로 타이머               │
+│  9. ⏰ 뽀모도로 타이머               │
 │  0. 🚪 종료                          │
 └──────────────────────────────────────┘
 EOF
@@ -148,7 +148,7 @@ EOF
 	paste -d ' ' /tmp/calendar_output.txt /tmp/menu_box.txt
 	    
 	echo
-	echo -e "${WHITE}현재: ${BOLD}${CURRENT_YEAR}년 ${CURRENT_MONTH}월${RESET}                                                      선택하세요 (0-7): \c"
+	echo -e "${WHITE}현재: ${BOLD}${CURRENT_YEAR}년 ${CURRENT_MONTH}월${RESET}                                                      선택하세요 (0-9): \c"
 
 	# 임시 파일 정리
 	rm -f /tmp/calendar_output.txt /tmp/menu_box.txt
@@ -156,223 +156,316 @@ EOF
 
 # ========== 숫자 검증 함수 ==========
 
+# 숫자인지 확인하는 함수
 is_number() {
-    echo "$1" | grep -q '^[0-9]\+$'
+	echo "$1" | grep -q '^[0-9]\+$'
 }
 
 # ========== 일정 관리 함수들 ==========
 
+# 일정 추가
 add_schedule() {
-    echo
-    echo -e "${CYAN}${BOLD}=== 일정 추가 ===${RESET}"
-    echo
+	echo
+	echo -e "${CYAN}${BOLD}=== 일정 추가 ===${RESET}"
+	echo
+
+	echo -n "년도 (현재: $CURRENT_YEAR): "
+	read year
+	if [ -z "$year" ]; then
+		year=$CURRENT_YEAR
+	fi
+
+	echo -n "월 (현재: $CURRENT_MONTH): "
+	read month
+	if [ -z "$month" ]; then
+		month=$CURRENT_MONTH
+	fi
+
+	echo -n "일: "
+	read day
     
-    echo -n "년도 (현재: $CURRENT_YEAR): "
-    read year
-    if [ -z "$year" ]; then year=$CURRENT_YEAR; fi
+	echo -n "일정 제목: "
+	read title
     
-    echo -n "월 (현재: $CURRENT_MONTH): "
-    read month
-    if [ -z "$month" ]; then month=$CURRENT_MONTH; fi
-    
-    echo -n "일: "
-    read day
-    
-    echo -n "일정 제목: "
-    read title
-    
-    # 유효성 검사
-    if ! is_number "$year" || ! is_number "$month" || ! is_number "$day"; then
-        echo -e "${RED}잘못된 날짜 형식입니다. 숫자만 입력하세요.${RESET}"
-        echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"; read; return
-    fi
-    
-    if [ $month -lt 1 ] || [ $month -gt 12 ]; then
-        echo -e "${RED}월은 1-12 사이의 값이어야 합니다.${RESET}"
-        echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"; read; return
-    fi
-    
-    if [ $day -lt 1 ] || [ $day -gt 31 ]; then
-        echo -e "${RED}일은 1-31 사이의 값이어야 합니다.${RESET}"
-        echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"; read; return
-    fi
-    
-    if [ -z "$title" ]; then
-        echo -e "${RED}일정 제목을 입력해야 합니다.${RESET}"
-        echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"; read; return
-    fi
-    
-    $PROGRAM_DIR/calendar_schedule add $year $month $day "$title"
-    
-    echo -e "${GREEN}일정이 추가되었습니다!${RESET}"
-    echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"; read
+	# 유효성 검사
+	if ! is_number "$year" || ! is_number "$month" || ! is_number "$day"; then
+		echo -e "${RED}잘못된 날짜 형식입니다. 숫자만 입력하세요.${RESET}"
+		echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+		read
+		return
+	fi
+
+	if [ $month -lt 1 ] || [ $month -gt 12 ]; then
+		echo -e "${RED}월은 1-12 사이의 값이어야 합니다.${RESET}"
+		echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+		read
+		return
+	fi
+
+	# 일수 검사
+	case $month in
+		1|3|5|7|8|10|12) max_days=31 ;;
+		4|6|9|11) max_days=30 ;;
+		2)
+			# 윤년 계산
+			if [ $((year % 4)) -eq 0 ] && [ $((year % 100)) -ne 0 ] || [ $((year % 400)) -eq 0 ]; then
+				max_days=29
+			else
+				max_days=28
+			fi
+			;;
+	esac
+
+	if [ $day -lt 1 ] || [ $day -gt $max_days ]; then
+		echo -e "${RED}일은 1-$max_days 사이의 값이어야 합니다.${RESET}"
+		echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+		read
+		return
+	fi
+
+	# 일정 추가 실행
+	$PROGRAM_DIR/calendar_schedule add $year $month $day "$title"
+	echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+	read
 }
 
+# 이번 달 모든 일정 보기
 show_all_schedules() {
-    echo
-    echo -e "${CYAN}${BOLD}=== ${CURRENT_YEAR}년 ${CURRENT_MONTH}월 전체 일정 ===${RESET}"
-    $PROGRAM_DIR/calendar_schedule show $CURRENT_YEAR $CURRENT_MONTH
-    echo
-    echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"; read
+	echo
+	echo -e "${CYAN}${BOLD}=== $CURRENT_YEAR년 $CURRENT_MONTH월 일정 목록 ===${RESET}"
+	echo
+	$PROGRAM_DIR/calendar_schedule show $CURRENT_YEAR $CURRENT_MONTH
+	echo
+	echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+	read
 }
 
+# 특정 날짜 일정 보기
 show_day_schedules() {
-    echo
-    echo -e "${CYAN}${BOLD}=== 특정 날짜 일정 보기 ===${RESET}"
-    echo
-    
-    echo -n "년도 (현재: $CURRENT_YEAR): "
-    read year
-    if [ -z "$year" ]; then year=$CURRENT_YEAR; fi
-    
-    echo -n "월 (현재: $CURRENT_MONTH): "
-    read month
-    if [ -z "$month" ]; then month=$CURRENT_MONTH; fi
-    
-    echo -n "일: "
-    read day
-    
-    if is_number "$year" && is_number "$month" && is_number "$day"; then
-        $PROGRAM_DIR/calendar_schedule day $year $month $day
-    else
-        echo -e "${RED}잘못된 날짜 형식입니다.${RESET}"
-    fi
-    
-    echo
-    echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"; read
+	echo
+	echo -e "${CYAN}${BOLD}=== 특정 날짜 일정 보기 ===${RESET}"
+	echo
+
+	echo -n "년도 (현재: $CURRENT_YEAR): "
+	read year
+	if [ -z "$year" ]; then
+		year=$CURRENT_YEAR
+	fi
+
+	echo -n "월 (현재: $CURRENT_MONTH): "
+	read month
+	if [ -z "$month" ]; then
+		month=$CURRENT_MONTH
+	fi
+
+	echo -n "일: "
+	read day
+
+	# 유효성 검사
+	if ! is_number "$year" || ! is_number "$month" || ! is_number "$day"; then
+		echo -e "${RED}잘못된 날짜 형식입니다. 숫자만 입력하세요.${RESET}"
+		echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+		read
+		return
+	fi
+
+	if [ $month -lt 1 ] || [ $month -gt 12 ]; then
+		echo -e "${RED}월은 1-12 사이의 값이어야 합니다.${RESET}"
+		echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+		read
+		return
+	fi
+
+	# 일수 검사
+	case $month in
+		1|3|5|7|8|10|12) max_days=31 ;;
+		4|6|9|11) max_days=30 ;;
+		2)
+			# 윤년 계산
+			if [ $((year % 4)) -eq 0 ] && [ $((year % 100)) -ne 0 ] || [ $((year % 400)) -eq 0 ]; then
+				max_days=29
+			else
+				max_days=28
+			fi
+			;;
+	esac
+
+	if [ $day -lt 1 ] || [ $day -gt $max_days ]; then
+		echo -e "${RED}일은 1-$max_days 사이의 값이어야 합니다.${RESET}"
+		echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+		read
+		return
+	fi
+
+	echo
+	echo -e "${CYAN}${BOLD}=== $year년 $month월 $day일 일정 ===${RESET}"
+	echo
+	$PROGRAM_DIR/calendar_schedule day $year $month $day
+	echo
+	echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+	read
 }
 
-delete_schedule() {
-    echo
-    echo -e "${CYAN}${BOLD}=== 일정 삭제 ===${RESET}"
-    echo
-    
-    echo -n "년도 (현재: $CURRENT_YEAR): "
-    read year
-    if [ -z "$year" ]; then year=$CURRENT_YEAR; fi
-    
-    echo -n "월 (현재: $CURRENT_MONTH): "
-    read month
-    if [ -z "$month" ]; then month=$CURRENT_MONTH; fi
-    
-    echo -n "일: "
-    read day
-    
-    if ! is_number "$year" || ! is_number "$month" || ! is_number "$day"; then
-        echo -e "${RED}잘못된 날짜 형식입니다.${RESET}"
-        echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"; read; return
-    fi
-    
-    echo
-    echo -e "${WHITE}${year}년 ${month}월 ${day}일의 일정을 삭제합니다.${RESET}"
-    $PROGRAM_DIR/calendar_schedule delete $year $month $day
-    
-    echo
-    echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"; read
+# 일정 삭제
+delete_schedules() {
+	echo
+	echo -e "${CYAN}${BOLD}=== 일정 삭제 ===${RESET}"
+	echo
+
+	echo -n "년도 (현재: $CURRENT_YEAR): "
+	read year
+	if [ -z "$year" ]; then
+		year=$CURRENT_YEAR
+	fi
+
+	echo -n "월 (현재: $CURRENT_MONTH): "
+	read month
+	if [ -z "$month" ]; then
+		month=$CURRENT_MONTH
+	fi
+
+	echo -n "일: "
+	read day
+
+	# 유효성 검사
+	if ! is_number "$year" || ! is_number "$month" || ! is_number "$day"; then
+		echo -e "${RED}잘못된 날짜 형식입니다. 숫자만 입력하세요.${RESET}"
+		echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+		read
+		return
+	fi
+
+	if [ $month -lt 1 ] || [ $month -gt 12 ]; then
+		echo -e "${RED}월은 1-12 사이의 값이어야 합니다.${RESET}"
+		echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+		read
+		return
+	fi
+
+	# 일수 검사
+	case $month in
+		1|3|5|7|8|10|12) max_days=31 ;;
+		4|6|9|11) max_days=30 ;;
+		2)
+			# 윤년 계산
+			if [ $((year % 4)) -eq 0 ] && [ $((year % 100)) -ne 0 ] || [ $((year % 400)) -eq 0 ]; then
+				max_days=29
+			else
+				max_days=28
+			fi
+			;;
+	esac
+
+	if [ $day -lt 1 ] || [ $day -gt $max_days ]; then
+		echo -e "${RED}일은 1-$max_days 사이의 값이어야 합니다.${RESET}"
+		echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+		read
+		return
+	fi
+
+	# 일정 삭제 실행
+	$PROGRAM_DIR/calendar_schedule delete $year $month $day
+	echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+	read
 }
 
-# ========== 달력 이동 함수들 ==========
+# 특정 달로 이동
+go_to_month() {
+	echo
+	echo -e "${CYAN}${BOLD}=== 특정 달로 이동 ===${RESET}"
+	echo
 
-prev_month() {
-    CURRENT_MONTH=$((CURRENT_MONTH - 1))
-    if [ $CURRENT_MONTH -eq 0 ]; then
-        CURRENT_MONTH=12
-        CURRENT_YEAR=$((CURRENT_YEAR - 1))
-    fi
+	echo -n "년도 (현재: $CURRENT_YEAR): "
+	read year
+	if [ -z "$year" ]; then
+		year=$CURRENT_YEAR
+	fi
+
+	echo -n "월 (현재: $CURRENT_MONTH): "
+	read month
+	if [ -z "$month" ]; then
+		month=$CURRENT_MONTH
+	fi
+
+	# 유효성 검사
+	if ! is_number "$year" || ! is_number "$month"; then
+		echo -e "${RED}잘못된 날짜 형식입니다. 숫자만 입력하세요.${RESET}"
+		echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+		read
+		return
+	fi
+
+	if [ $month -lt 1 ] || [ $month -gt 12 ]; then
+		echo -e "${RED}월은 1-12 사이의 값이어야 합니다.${RESET}"
+		echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+		read
+		return
+	fi
+
+	CURRENT_YEAR=$year
+	CURRENT_MONTH=$month
 }
 
-next_month() {
-    CURRENT_MONTH=$((CURRENT_MONTH + 1))
-    if [ $CURRENT_MONTH -eq 13 ]; then
-        CURRENT_MONTH=1
-        CURRENT_YEAR=$((CURRENT_YEAR + 1))
-    fi
-}
-
-goto_month() {
-    echo
-    echo -e "${CYAN}${BOLD}=== 특정 달로 이동 ===${RESET}"
-    echo
-    
-    echo -n "년도를 입력하세요: "
-    read year
-    echo -n "월을 입력하세요 (1-12): "
-    read month
-    
-    if is_number "$year" && is_number "$month"; then
-        if [ $month -ge 1 ] && [ $month -le 12 ]; then
-            CURRENT_YEAR=$year
-            CURRENT_MONTH=$month
-        else
-            echo -e "${RED}월은 1-12 사이의 값이어야 합니다.${RESET}"
-            echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"; read
-        fi
-    else
-        echo -e "${RED}잘못된 입력입니다.${RESET}"
-        echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"; read
-    fi
-}
-# [calendar.sh 수정본2.txt 기반 코드 종료]
-
-# [message (1).txt 통합을 위해 추가된 코드 시작]
-# ========== 추가 기능 함수들 ==========
-run_chat_system() {
-    clear
-    echo -e "${CYAN}${BOLD}=== 💬 터미널 채팅 시스템 시작 ===${RESET}"
-    # 컴파일된 채팅 프로그램 실행
-    $PROGRAM_DIR/terminal_chat
-    echo
-    echo -e "${YELLOW}채팅 시스템을 종료했습니다. Enter를 눌러 캘린더로 돌아갑니다...${RESET}"
-    read
+# 터미널 채팅 실행
+run_terminal_chat() {
+	echo
+	echo -e "${CYAN}${BOLD}=== 터미널 채팅 ===${RESET}"
+	echo
+	$PROGRAM_DIR/terminal_chat
+	echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+	read
 }
 
 # 뽀모도로 타이머 실행
 run_pomodoro_timer() {
-    $PROGRAM_DIR/pomodoro_timer
-}
-# [message (1).txt 통합을 위해 추가된 코드 종료]
-
-# [calendar.sh 수정본2.txt 기반 코드 시작]
-# 추가기능 2 (미구현)
-additional_feature_2() {
-    echo
-    echo -e "${CYAN}${BOLD}=== 🔧 추가기능 2 ===${RESET}"
-    echo -e "${YELLOW}이 기능은 아직 구현되지 않았습니다.${RESET}"
-    echo
-    echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"; read
+	echo
+	echo -e "${CYAN}${BOLD}=== 뽀모도로 타이머 ===${RESET}"
+	echo
+	$PROGRAM_DIR/pomodoro_timer
+	echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+	read
 }
 
 # ========== 메인 루프 ==========
-main_loop() {
-    while true; do
-        show_main_screen
-        read choice
-        
-        case $choice in
-            1) add_schedule ;;
-            2) show_all_schedules ;;
-            3) show_day_schedules ;;
-            4) delete_schedule ;;
-            5) prev_month ;;
-            6) next_month ;;
-            7) goto_month ;;
-            8) run_chat_system ;;
-            9) run_pomodoro_timer ;;
-            0) 
-                echo
-                echo -e "${GREEN}터미널 캘린더를 종료합니다. 👋${RESET}"
-                exit 0 
-                ;;
-            *) 
-                echo
-                echo -e "${RED}잘못된 선택입니다. 0-9 사이의 숫자를 입력하세요.${RESET}"
-                echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"; read
-                ;;
-        esac
-    done
-}
 
-# ========== 프로그램 시작 ==========
+# 프로그램 체크
 check_programs
-main_loop
+
+# 메인 루프
+while true; do
+	show_main_screen
+	read choice
+
+	case $choice in
+		1) add_schedule ;;
+		2) show_all_schedules ;;
+		3) show_day_schedules ;;
+		4) delete_schedules ;;
+		5)
+			if [ $CURRENT_MONTH -eq 1 ]; then
+				CURRENT_YEAR=$((CURRENT_YEAR - 1))
+				CURRENT_MONTH=12
+			else
+				CURRENT_MONTH=$((CURRENT_MONTH - 1))
+			fi
+			;;
+		6)
+			if [ $CURRENT_MONTH -eq 12 ]; then
+				CURRENT_YEAR=$((CURRENT_YEAR + 1))
+				CURRENT_MONTH=1
+			else
+				CURRENT_MONTH=$((CURRENT_MONTH + 1))
+			fi
+			;;
+		7) go_to_month ;;
+		8) run_terminal_chat ;;
+		9) run_pomodoro_timer ;;
+		0) exit 0 ;;
+		*)
+			echo -e "${RED}잘못된 선택입니다. 0-9 사이의 숫자를 입력하세요.${RESET}"
+			echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
+			read
+			;;
+	esac
+done
 # [calendar.sh 수정본2.txt 기반 코드 종료]
