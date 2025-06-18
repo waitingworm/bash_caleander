@@ -44,22 +44,5 @@ distclean: clean
 	@rm -f schedules.txt chat_*.txt files.txt temp.txt pomodoro_log_*.txt
 	@echo "✅ 모든 파일 정리 완료"
 
-# 샘플 데이터 생성
-sample:
-	@echo "📝 샘플 데이터 생성 중..."
-	@echo "2025,6,2,대통령신기원" > schedules.txt
-	@echo "2025,6,5,창홀림" >> schedules.txt
-	@echo "2025,6,8,자료구조기말" >> schedules.txt
-	@echo "2025,6,15,한글테스트" >> schedules.txt
-	@echo "2025,6,20,시스템프로그래밍" >> schedules.txt
-	@echo "✅ 샘플 데이터 생성 완료"
 
-# 빠른 테스트
-test: all sample
-	@echo "🧪 테스트 중..."
-	@./calendar_system 2025 6
-	@echo ""
-	@./calendar_schedule show 2025 6
-
-.PHONY: all clean distclean sample test
 # [Makefile 수정본2.txt 기반 코드 종료]
