@@ -420,20 +420,54 @@ run_terminal_chat() {
 			$PROGRAM_DIR/terminal_chat
 			;;
 		2)
-			# chatserver가 실행 중인지 확인, 없으면 백그라운드 실행
-			if ! pgrep -f "$PROGRAM_DIR/chatserver" > /dev/null; then
-				$PROGRAM_DIR/chatserver &
-				sleep 1
-			fi
-			$PROGRAM_DIR/chatclient
+			echo -e "${CYAN}${BOLD}=== 채팅 서버/클라이언트 선택 ===${RESET}"
+			echo
+			echo "1. 서버 실행"
+			echo "2. 클라이언트 실행"
+			read -p "선택: " chat_mode
+			case $chat_mode in
+				1)
+					read -p "포트 번호 (기본: 8080): " port
+					port=${port:-8080}
+					$PROGRAM_DIR/chatserver $port
+					;;
+				2)
+					read -p "서버 IP (기본: 127.0.0.1): " ip
+					ip=${ip:-127.0.0.1}
+					read -p "포트 번호 (기본: 8080): " port
+					port=${port:-8080}
+					read -p "닉네임: " nickname
+					$PROGRAM_DIR/chatclient $ip $port $nickname
+					;;
+				*)
+					echo "잘못된 선택입니다."
+					;;
+			esac
 			;;
 		3)
-			# ftpserver가 실행 중인지 확인, 없으면 백그라운드 실행
-			if ! pgrep -f "$PROGRAM_DIR/ftpserver" > /dev/null; then
-				$PROGRAM_DIR/ftpserver &
-				sleep 1
-			fi
-			$PROGRAM_DIR/ftpclient
+			echo -e "${CYAN}${BOLD}=== FTP 서버/클라이언트 선택 ===${RESET}"
+			echo
+			echo "1. 서버 실행"
+			echo "2. 클라이언트 실행"
+			read -p "선택: " ftp_mode
+			case $ftp_mode in
+				1)
+					read -p "전송할 파일명: " filename
+					read -p "포트 번호 (기본: 8080): " port
+					port=${port:-8080}
+					$PROGRAM_DIR/ftpserver $filename $port
+					;;
+				2)
+					read -p "서버 IP (기본: 127.0.0.1): " ip
+					ip=${ip:-127.0.0.1}
+					read -p "포트 번호 (기본: 8080): " port
+					port=${port:-8080}
+					$PROGRAM_DIR/ftpclient $ip $port
+					;;
+				*)
+					echo "잘못된 선택입니다."
+					;;
+			esac
 			;;
 		*)
 			echo "잘못된 선택입니다."
