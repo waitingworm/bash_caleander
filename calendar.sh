@@ -434,8 +434,8 @@ run_terminal_chat() {
 					# 포트 사용 중인지 확인
 					if lsof -i :$port >/dev/null 2>&1; then
 						echo "포트 $port가 이미 사용 중입니다. 이전 프로세스를 종료합니다..."
-						sudo kill $(sudo lsof -t -i:$port) 2>/dev/null
-						sleep 1
+						sudo fuser -k $port/tcp 2>/dev/null
+						sleep 2
 					fi
 					
 					# 서버를 백그라운드로 실행
@@ -449,10 +449,11 @@ run_terminal_chat() {
 					echo "서버와 클라이언트가 백그라운드에서 실행 중입니다."
 					echo "채팅을 종료하려면 Ctrl+C를 누르세요."
 					# 사용자가 Ctrl+C를 누를 때까지 대기
-					trap "kill $SERVER_PID $CLIENT_PID 2>/dev/null; exit 0" INT
+					trap "kill $SERVER_PID $CLIENT_PID 2>/dev/null; sudo fuser -k $port/tcp 2>/dev/null; exit 0" INT
 					wait $CLIENT_PID
 					# 클라이언트가 종료되면 서버도 종료
 					kill $SERVER_PID 2>/dev/null
+					sudo fuser -k $port/tcp 2>/dev/null
 					;;
 				2)
 					read -p "서버 IP (기본: 127.0.0.1): " ip
@@ -482,8 +483,8 @@ run_terminal_chat() {
 					# 포트 사용 중인지 확인
 					if lsof -i :$port >/dev/null 2>&1; then
 						echo "포트 $port가 이미 사용 중입니다. 이전 프로세스를 종료합니다..."
-						sudo kill $(sudo lsof -t -i:$port) 2>/dev/null
-						sleep 1
+						sudo fuser -k $port/tcp 2>/dev/null
+						sleep 2
 					fi
 					
 					# 서버를 백그라운드로 실행
@@ -497,10 +498,11 @@ run_terminal_chat() {
 					echo "서버와 클라이언트가 백그라운드에서 실행 중입니다."
 					echo "FTP를 종료하려면 Ctrl+C를 누르세요."
 					# 사용자가 Ctrl+C를 누를 때까지 대기
-					trap "kill $SERVER_PID $CLIENT_PID 2>/dev/null; exit 0" INT
+					trap "kill $SERVER_PID $CLIENT_PID 2>/dev/null; sudo fuser -k $port/tcp 2>/dev/null; exit 0" INT
 					wait $CLIENT_PID
 					# 클라이언트가 종료되면 서버도 종료
 					kill $SERVER_PID 2>/dev/null
+					sudo fuser -k $port/tcp 2>/dev/null
 					;;
 				2)
 					read -p "서버 IP (기본: 127.0.0.1): " ip
