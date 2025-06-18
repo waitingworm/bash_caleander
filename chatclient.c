@@ -6,111 +6,91 @@
 #include <sys/socket.h>
 #include <pthread.h>
 
-#define MAX_NAME_LEN 15
-#define MAX_MSG_LEN 1000
-#define MAX_IP_LEN 15
-#define MAX_PORT_LEN 5
-
-char my_name[MAX_NAME_LEN + 1];
-char message[MAX_MSG_LEN + 1];
-char server_port[MAX_PORT_LEN + 1];
-char my_IP[MAX_IP_LEN + 1];
+char my_name[16];
+char message[1008];
+char server_port[8];
+char my_IP[16];
 
 void* send_message(void* server_socket) {
-	char my_information[128];
-	char name_message[MAX_MSG_LEN + MAX_NAME_LEN + 5];
-	int sock = *(int*)server_socket;
+	char my_information[64];
+	char name_message[1024];
 	
-	snprintf(my_information, sizeof(my_information), "앗! 야생의 [%s]가 나타났다! IP: %s\n", my_name, my_IP);
-	if(write(sock, my_information, strlen(my_information)) < 0) {
-		perror("초기 메시지 전송 실패");
-		return NULL;
-	}
+	sprintf(my_information, "앗! 야생의 [%s]가 나타났다! IP: %s\n", my_name, my_IP);
+	fflush(stdin);
+	write(*(int*)server_socket, my_information, strlen(my_information));
 
 	while(1) {
-		fgets(message, 1008, stdin);
+		printf("> "); // 입력 프롬프트
+		fflush(stdout);
+		if(fgets(message, 1008, stdin) == NULL) break;
 		fflush(stdin);
 
-		if(!strncmp(message, "exit", 4) || !strncmp(message, "::quit", 6)) {
-			write(sock, "\0", 1);
-			close(sock);
+		// 입력 줄 지우기 (커서를 위로 올리고 줄 삭제)
+		printf("\033[A\33[2K\r");
+
+		if(!strncmp(message, "::quit", 6)) {
+			write(*(int*)server_socket, "\0", 1);
+			close(*(int*)server_socket);
 			exit(0);
 		}
 
 		sprintf(name_message, "[%s]: %s", my_name, message);
-		write(sock, name_message, strlen(name_message)+1);
+		write(*(int*)server_socket, name_message, strlen(name_message)+1);
 	}
-	return NULL;
 }
 
 void* receive_message(void* server_socket) { 
-	char name_message[MAX_MSG_LEN + MAX_NAME_LEN + 5];
+	char name_message[1024];
 	int message_length;
-	int sock = *(int*)server_socket;
 
 	while(1) {
-		message_length = read(sock, name_message, sizeof(name_message) - 1);
-		if(message_length <= 0) {
-			if(message_length < 0) {
-				perror("메시지 수신 실패");
-			}
-			break;
-		}
+		message_length= read(*(int*)server_socket, name_message, 1023);
+		if(message_length == -1)
+			return (void*)-1;
 
-		name_message[message_length] = '\0';
-		fputs(name_message, stdout);
-		fflush(stdout);
+		name_message[message_length]= '\0';
+
+		// 내가 보낸 메시지만 출력
+		char my_prefix[32];
+		sprintf(my_prefix, "[%s]:", my_name);
+		if(strncmp(name_message, my_prefix, strlen(my_prefix)) == 0) {
+			fputs(name_message, stdout);
+		}
+		// else: 아무것도 출력하지 않음 (주석 처리)
 	}
-	return NULL;
 }
 
-int main(int argc, char *argv[]) {
-	if(argc != 4) {
-		printf("사용법: %s <서버IP> <포트번호> <닉네임>\n", argv[0]);
-		return 1;
-	}
 
+int main(int argc, char *argv[]) {
 	int server_socket;
 	struct sockaddr_in server_address;
 	pthread_t send_t, receive_t;
 	void* t_terminate;
 	
-	strncpy(my_IP, argv[1], MAX_IP_LEN);
-	strncpy(server_port, argv[2], MAX_PORT_LEN);
-	strncpy(my_name, argv[3], MAX_NAME_LEN);
-	
-	if((server_socket = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
-		perror("소켓 생성 실패");
-		return 1;
+	sprintf(my_IP, "%s", argv[1]);
+	sprintf(server_port, "%s", argv[2]);
+	sprintf(my_name, "%s", argv[3]);
+	if((server_socket= socket(PF_INET, SOCK_STREAM, 0)) == -1) {
+		printf("Failed to create socket.\n");
+		exit(1);
 	}
 	
 	printf("어디로든 문!\n");
 	
-	server_address.sin_family = AF_INET;
-	server_address.sin_addr.s_addr = inet_addr(my_IP);
-	server_address.sin_port = htons(atoi(server_port));
+	server_address.sin_family= AF_INET;
+	server_address.sin_addr.s_addr= inet_addr(my_IP);
+	server_address.sin_port= htons(atoi(server_port));
 
 	if(connect(server_socket, (struct sockaddr*)&server_address, sizeof(server_address)) == -1) {
-		perror("서버 연결 실패");
-		close(server_socket);
-		return 1;
+		printf("앗! 너무 늦었네요! 파티원들은 이미 모험을 떠났답니다! :/\n");
+		exit(1);
 	}
 
-	int* sock_ptr = malloc(sizeof(int));
-	if(sock_ptr == NULL) {
-		perror("메모리 할당 실패");
-		close(server_socket);
-		return 1;
-	}
-	*sock_ptr = server_socket;
-
-	pthread_create(&send_t, NULL, send_message, sock_ptr);
-	pthread_create(&receive_t, NULL, receive_message, sock_ptr);
-	
+	pthread_create(&send_t, NULL, send_message, (void*)&server_socket);
+	pthread_create(&receive_t, NULL, receive_message, (void*)&server_socket);
 	pthread_join(send_t, &t_terminate);
 	pthread_join(receive_t, &t_terminate);
 
-	free(sock_ptr);
 	close(server_socket);
 	return 0;
 }
