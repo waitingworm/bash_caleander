@@ -447,9 +447,8 @@ run_terminal_chat() {
 					$PROGRAM_DIR/chatclient "127.0.0.1" $port $nickname &
 					CLIENT_PID=$!
 					echo "서버와 클라이언트가 백그라운드에서 실행 중입니다."
-					echo "채팅을 종료하려면 Ctrl+C를 누르세요."
-					# 사용자가 Ctrl+C를 누를 때까지 대기
-					trap "kill $SERVER_PID $CLIENT_PID 2>/dev/null; sudo fuser -k $port/tcp 2>/dev/null; exit 0" INT
+					echo "채팅을 종료하려면 'exit'를 입력하세요."
+					# 클라이언트가 종료될 때까지 대기
 					wait $CLIENT_PID
 					# 클라이언트가 종료되면 서버도 종료
 					kill $SERVER_PID 2>/dev/null
@@ -496,9 +495,8 @@ run_terminal_chat() {
 					$PROGRAM_DIR/ftpclient "127.0.0.1" $port &
 					CLIENT_PID=$!
 					echo "서버와 클라이언트가 백그라운드에서 실행 중입니다."
-					echo "FTP를 종료하려면 Ctrl+C를 누르세요."
-					# 사용자가 Ctrl+C를 누를 때까지 대기
-					trap "kill $SERVER_PID $CLIENT_PID 2>/dev/null; sudo fuser -k $port/tcp 2>/dev/null; exit 0" INT
+					echo "FTP를 종료하려면 'exit'를 입력하세요."
+					# 클라이언트가 종료될 때까지 대기
 					wait $CLIENT_PID
 					# 클라이언트가 종료되면 서버도 종료
 					kill $SERVER_PID 2>/dev/null
