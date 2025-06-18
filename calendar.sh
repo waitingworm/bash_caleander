@@ -422,15 +422,21 @@ run_terminal_chat() {
 		2)
 			echo -e "${CYAN}${BOLD}=== 채팅 서버/클라이언트 선택 ===${RESET}"
 			echo
-			echo "1. 서버 실행"
+			echo "1. 서버 실행 (클라이언트 자동 실행)"
 			echo "2. 클라이언트 실행"
-			echo "3. 서버와 클라이언트 동시 실행"
 			read -p "선택: " chat_mode
 			case $chat_mode in
 				1)
 					read -p "포트 번호 (기본: 8080): " port
 					port=${port:-8080}
-					$PROGRAM_DIR/chatserver $port
+					read -p "닉네임: " nickname
+					# 서버를 백그라운드로 실행
+					$PROGRAM_DIR/chatserver $port &
+					# 서버가 시작될 때까지 잠시 대기
+					sleep 2
+					# 클라이언트를 백그라운드로 실행
+					$PROGRAM_DIR/chatclient "127.0.0.1" $port $nickname &
+					echo "서버와 클라이언트가 백그라운드에서 실행 중입니다."
 					;;
 				2)
 					read -p "서버 IP (기본: 127.0.0.1): " ip
@@ -440,17 +446,6 @@ run_terminal_chat() {
 					read -p "닉네임: " nickname
 					$PROGRAM_DIR/chatclient $ip $port $nickname
 					;;
-				3)
-					read -p "포트 번호 (기본: 8080): " port
-					port=${port:-8080}
-					read -p "닉네임: " nickname
-					# 서버를 백그라운드로 실행
-					$PROGRAM_DIR/chatserver $port &
-					# 서버가 시작될 때까지 잠시 대기
-					sleep 2
-					# 클라이언트 실행
-					$PROGRAM_DIR/chatclient "127.0.0.1" $port $nickname
-					;;
 				*)
 					echo "잘못된 선택입니다."
 					;;
@@ -459,25 +454,11 @@ run_terminal_chat() {
 		3)
 			echo -e "${CYAN}${BOLD}=== FTP 서버/클라이언트 선택 ===${RESET}"
 			echo
-			echo "1. 서버 실행"
+			echo "1. 서버 실행 (클라이언트 자동 실행)"
 			echo "2. 클라이언트 실행"
-			echo "3. 서버와 클라이언트 동시 실행"
 			read -p "선택: " ftp_mode
 			case $ftp_mode in
 				1)
-					read -p "전송할 파일명: " filename
-					read -p "포트 번호 (기본: 8080): " port
-					port=${port:-8080}
-					$PROGRAM_DIR/ftpserver $filename $port
-					;;
-				2)
-					read -p "서버 IP (기본: 127.0.0.1): " ip
-					ip=${ip:-127.0.0.1}
-					read -p "포트 번호 (기본: 8080): " port
-					port=${port:-8080}
-					$PROGRAM_DIR/ftpclient $ip $port
-					;;
-				3)
 					read -p "전송할 파일명: " filename
 					read -p "포트 번호 (기본: 8080): " port
 					port=${port:-8080}
@@ -485,8 +466,16 @@ run_terminal_chat() {
 					$PROGRAM_DIR/ftpserver $filename $port &
 					# 서버가 시작될 때까지 잠시 대기
 					sleep 2
-					# 클라이언트 실행
-					$PROGRAM_DIR/ftpclient "127.0.0.1" $port
+					# 클라이언트를 백그라운드로 실행
+					$PROGRAM_DIR/ftpclient "127.0.0.1" $port &
+					echo "서버와 클라이언트가 백그라운드에서 실행 중입니다."
+					;;
+				2)
+					read -p "서버 IP (기본: 127.0.0.1): " ip
+					ip=${ip:-127.0.0.1}
+					read -p "포트 번호 (기본: 8080): " port
+					port=${port:-8080}
+					$PROGRAM_DIR/ftpclient $ip $port
 					;;
 				*)
 					echo "잘못된 선택입니다."
