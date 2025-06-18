@@ -3,7 +3,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -std=c99 -O2
 
 # 실행 파일
-TARGETS = calendar_system calendar_schedule terminal_chat pomodoro_timer
+TARGETS = calendar_system calendar_schedule terminal_chat pomodoro_timer ftpserver ftpclient chatserver chatclient
 
 # 기본 빌드
 all: $(TARGETS)
@@ -28,6 +28,15 @@ terminal_chat: terminal_chat.c
 	@echo "🔨 terminal_chat 컴파일 중..."
 	@$(CC) $(CFLAGS) -o terminal_chat terminal_chat.c
 
+# 채팅 서버/클라이언트 컴파일 규칙
+chatserver: chatserver.c
+	@echo "🔨 chatserver 컴파일 중..."
+	@$(CC) $(CFLAGS) -o chatserver chatserver.c
+
+chatclient: chatclient.c
+	@echo "🔨 chatclient 컴파일 중..."
+	@$(CC) $(CFLAGS) -o chatclient chatclient.c
+
 # 뽀모도로 타이머 컴파일 규칙
 pomodoro_timer: pomodoro_timer.c
 	@echo "🔨 pomodoro_timer 컴파일 중..."
@@ -44,5 +53,10 @@ distclean: clean
 	@rm -f schedules.txt chat_*.txt files.txt temp.txt pomodoro_log_*.txt
 	@echo "✅ 모든 파일 정리 완료"
 
+ftpserver: ftpserver.c
+	$(CC) $(CFLAGS) -o ftpserver ftpserver.c
+
+ftpclient: ftpclient.c
+	$(CC) $(CFLAGS) -o ftpclient ftpclient.c
 
 # [Makefile 수정본2.txt 기반 코드 종료]

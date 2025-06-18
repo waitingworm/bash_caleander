@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # [calendar.sh 수정본2.txt 기반 코드 시작]
 # ========== 색상 및 전역 변수 설정 ==========
@@ -71,7 +71,7 @@ show_main_screen() {
 │  5. ⬅️  이전 달                       │
 │  6. ➡️  다음 달                       │
 │  7. 📅 특정 달로 이동                │
-│  8. 💬 터미널 채팅                   │
+│  8. 💬 채팅                          │
 │  9. ⏰ 뽀모도로 타이머               │
 │  0. 🚪 종료                          │
 └──────────────────────────────────────┘
@@ -409,9 +409,36 @@ go_to_month() {
 # 터미널 채팅 실행
 run_terminal_chat() {
 	echo
-	echo -e "${CYAN}${BOLD}=== 터미널 채팅 ===${RESET}"
+	echo -e "${CYAN}${BOLD}=== 채팅 종류 선택 ===${RESET}"
 	echo
-	$PROGRAM_DIR/terminal_chat
+	echo "1. 기존 터미널 채팅"
+	echo "2. 채팅"
+	echo "3. FTP 파일 공유"
+	read -p "선택: " chat_choice
+	case $chat_choice in
+		1)
+			$PROGRAM_DIR/terminal_chat
+			;;
+		2)
+			# chatserver가 실행 중인지 확인, 없으면 백그라운드 실행
+			if ! pgrep -f "$PROGRAM_DIR/chatserver" > /dev/null; then
+				$PROGRAM_DIR/chatserver &
+				sleep 1
+			fi
+			$PROGRAM_DIR/chatclient
+			;;
+		3)
+			# ftpserver가 실행 중인지 확인, 없으면 백그라운드 실행
+			if ! pgrep -f "$PROGRAM_DIR/ftpserver" > /dev/null; then
+				$PROGRAM_DIR/ftpserver &
+				sleep 1
+			fi
+			$PROGRAM_DIR/ftpclient
+			;;
+		*)
+			echo "잘못된 선택입니다."
+			;;
+	esac
 	echo -e "${YELLOW}Enter를 눌러 계속...${RESET}"
 	read
 }
