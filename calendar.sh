@@ -430,42 +430,30 @@ run_terminal_chat() {
 					read -p "포트 번호 (기본: 8080): " port
 					port=${port:-8080}
 					read -p "닉네임: " nickname
-					
+
 					# 포트 사용 중인지 확인
 					if lsof -i :$port >/dev/null 2>&1; then
 						echo "포트 $port가 이미 사용 중입니다. 이전 프로세스를 종료합니다..."
 						sudo fuser -k $port/tcp 2>/dev/null
-						sleep 3  # 대기 시간 증가
-						# 포트가 여전히 사용 중인지 다시 확인
-						if lsof -i :$port >/dev/null 2>&1; then
-							echo "포트를 정리할 수 없습니다. 다른 포트를 사용해주세요."
-							return 1
-						fi
+						sleep 2
 					fi
-					
+
 					# 서버를 백그라운드로 실행
 					$PROGRAM_DIR/chatserver $port &
 					SERVER_PID=$!
-					# 서버가 시작될 때까지 충분히 대기
-					sleep 3
-					
-					# 서버가 정상적으로 시작되었는지 확인
-					if ! lsof -i :$port >/dev/null 2>&1; then
-						echo "서버 시작 실패. 다른 포트를 사용해주세요."
-						return 1
-					fi
-					
+					# 서버가 시작될 때까지 잠시 대기
+					sleep 2
 					# 클라이언트를 백그라운드로 실행
 					$PROGRAM_DIR/chatclient "127.0.0.1" $port $nickname &
 					CLIENT_PID=$!
 					echo "서버와 클라이언트가 백그라운드에서 실행 중입니다."
-					echo "채팅을 종료하려면 'exit'를 입력하세요."
-					# 클라이언트가 종료될 때까지 대기
+					echo "채팅을 종료하려면 Ctrl+C를 누르세요."
+					# 사용자가 Ctrl+C를 누를 때까지 대기
+					trap "kill $SERVER_PID $CLIENT_PID 2>/dev/null; sudo fuser -k $port/tcp 2>/dev/null; exit 0" INT
 					wait $CLIENT_PID
 					# 클라이언트가 종료되면 서버도 종료
 					kill $SERVER_PID 2>/dev/null
 					sudo fuser -k $port/tcp 2>/dev/null
-					sleep 2  # 서버가 완전히 종료될 때까지 대기
 					;;
 				2)
 					read -p "서버 IP (기본: 127.0.0.1): " ip
@@ -491,14 +479,14 @@ run_terminal_chat() {
 					read -p "전송할 파일명: " filename
 					read -p "포트 번호 (기본: 8080): " port
 					port=${port:-8080}
-					
+
 					# 포트 사용 중인지 확인
 					if lsof -i :$port >/dev/null 2>&1; then
 						echo "포트 $port가 이미 사용 중입니다. 이전 프로세스를 종료합니다..."
 						sudo fuser -k $port/tcp 2>/dev/null
 						sleep 2
 					fi
-					
+
 					# 서버를 백그라운드로 실행
 					$PROGRAM_DIR/ftpserver $filename $port &
 					SERVER_PID=$!
@@ -508,8 +496,9 @@ run_terminal_chat() {
 					$PROGRAM_DIR/ftpclient "127.0.0.1" $port &
 					CLIENT_PID=$!
 					echo "서버와 클라이언트가 백그라운드에서 실행 중입니다."
-					echo "FTP를 종료하려면 'exit'를 입력하세요."
-					# 클라이언트가 종료될 때까지 대기
+					echo "FTP를 종료하려면 Ctrl+C를 누르세요."
+					# 사용자가 Ctrl+C를 누를 때까지 대기
+					trap "kill $SERVER_PID $CLIENT_PID 2>/dev/null; sudo fuser -k $port/tcp 2>/dev/null; exit 0" INT
 					wait $CLIENT_PID
 					# 클라이언트가 종료되면 서버도 종료
 					kill $SERVER_PID 2>/dev/null
