@@ -430,6 +430,14 @@ run_terminal_chat() {
 					read -p "포트 번호 (기본: 8080): " port
 					port=${port:-8080}
 					read -p "닉네임: " nickname
+					
+					# 포트 사용 중인지 확인
+					if lsof -i :$port >/dev/null 2>&1; then
+						echo "포트 $port가 이미 사용 중입니다. 이전 프로세스를 종료합니다..."
+						sudo kill $(sudo lsof -t -i:$port) 2>/dev/null
+						sleep 1
+					fi
+					
 					# 서버를 백그라운드로 실행
 					$PROGRAM_DIR/chatserver $port &
 					SERVER_PID=$!
@@ -470,6 +478,14 @@ run_terminal_chat() {
 					read -p "전송할 파일명: " filename
 					read -p "포트 번호 (기본: 8080): " port
 					port=${port:-8080}
+					
+					# 포트 사용 중인지 확인
+					if lsof -i :$port >/dev/null 2>&1; then
+						echo "포트 $port가 이미 사용 중입니다. 이전 프로세스를 종료합니다..."
+						sudo kill $(sudo lsof -t -i:$port) 2>/dev/null
+						sleep 1
+					fi
+					
 					# 서버를 백그라운드로 실행
 					$PROGRAM_DIR/ftpserver $filename $port &
 					SERVER_PID=$!
