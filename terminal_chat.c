@@ -129,9 +129,9 @@ void tag_search_file(const char* tag) {
 // 파일 정보 업로드
 void upload_file(const char* nickname) {
     char filename[64], description[128], tags[128];
-    printf("\n[파일 업로드]\n파일명: "); scanf("%s", filename); getchar();
-    printf("설명: "); fgets(description, sizeof(description), stdin); description[strcspn(description, "\n")] = 0;
-    printf("태그 (쉼표로 구분): "); fgets(tags, sizeof(tags), stdin); tags[strcspn(tags, "\n")] = 0;
+    printf("\n[파일 업로드]\n파일명: "); if (scanf("%s", filename) != 1) return;
+    printf("설명: "); if (!fgets(description, sizeof(description), stdin)) return; description[strcspn(description, "\n")] = 0;
+    printf("태그 (쉼표로 구분): "); if (!fgets(tags, sizeof(tags), stdin)) return; tags[strcspn(tags, "\n")] = 0;
     FILE* file_meta = fopen("files.txt", "a");
     if (file_meta) {
         fprintf(file_meta, "%s - %s [%s] (%s)\n", filename, description, tags, nickname);
@@ -143,7 +143,7 @@ void upload_file(const char* nickname) {
 // 파일 정보 삭제
 void delete_file(const char* nickname) {
     char filename[64];
-    printf("\n[파일 삭제]\n삭제할 파일명: "); scanf("%s", filename);
+    printf("\n[파일 삭제]\n삭제할 파일명: "); if (scanf("%s", filename) != 1) return;
     FILE* fp = fopen("files.txt", "r");
     FILE* temp = fopen("temp.txt", "w");
     if (!fp || !temp) { perror("파일 열기 실패"); return; }
@@ -184,7 +184,7 @@ void list_tags() {
     printf("\n[태그 목록]\n");
     for (int i = 0; i < tag_count; i++) printf("%d) %s\n", i + 1, all_tags[i]);
     int choice;
-    printf("\n검색할 태그 번호 선택 (0: 취소): "); scanf("%d", &choice); getchar();
+    printf("\n검색할 태그 번호 선택 (0: 취소): "); if (scanf("%d", &choice) != 1) return; getchar();
     if (choice > 0 && choice <= tag_count) tag_search_file(all_tags[choice - 1]);
     else if (choice != 0) printf("잘못된 번호\n");
 }
@@ -195,7 +195,7 @@ void select_chat_room() {
     char roomname[32];
     char input[32];
     printf("\n[채팅방 선택]\n1) 전기공학\n2) 전자공학\n3) 시스템공학\n4) 새 채팅방 만들기\n선택: ");
-    fgets(input, sizeof(input), stdin);
+    if (!fgets(input, sizeof(input), stdin)) return;
     if (sscanf(input, "%d", &room) != 1) {
         printf("입력이 잘못되었습니다. 기본 채팅방으로 연결합니다.\n");
         strcpy(chat_filename, "chat_log.txt");
@@ -214,8 +214,8 @@ void select_chat_room() {
         strcpy(chat_roomname, "시스템공학");
     } else if (room == 4) {
         printf("채팅방 이름 입력: ");
-        scanf("%s", roomname);
-        getchar();
+        if (!fgets(roomname, sizeof(roomname), stdin)) return;
+        roomname[strcspn(roomname, "\n")] = 0;
         snprintf(chat_filename, sizeof(chat_filename), "chat_%s.txt", roomname);
         snprintf(chat_roomname, sizeof(chat_roomname), "%s", roomname);
         printf("'%s' 채팅방 입장\n", roomname);
@@ -236,8 +236,14 @@ int main(int argc, char* argv[]) {
 
     print_help();
     printf("\n환영합니다! 닉네임을 입력하세요: ");
-    scanf("%s", nickname);
-    getchar(); // 버퍼 비우기
+    if (!fgets(nickname, sizeof(nickname), stdin)) return 0;
+    nickname[strcspn(nickname, "\n")] = 0; // 개행 문자 제거
+
+    // 닉네임, 파일명, 메시지 등 길이 제한 및 유효성 검사
+    if(strlen(nickname) == 0 || strlen(nickname) > 31) {
+        printf("닉네임은 1~31자 이내여야 합니다.\n");
+        return 0;
+    }
 
     select_chat_room();
 
@@ -247,13 +253,17 @@ int main(int argc, char* argv[]) {
         check_new_message_alert();
 
         printf("\n명령어를 입력하세요: ");
-        scanf("%s", command);
-        getchar(); // 버퍼 비우기
+        if (!fgets(command, sizeof(command), stdin)) return 0;
+        command[strcspn(command, "\n")] = 0; // 개행 문자 제거
 
         if (strcmp(command, "send") == 0) {
             printf("메시지 입력: ");
-            fgets(message, sizeof(message), stdin);
+            if (!fgets(message, sizeof(message), stdin)) return 0;
             message[strcspn(message, "\n")] = 0; // 개행 문자 제거
+            if(strlen(message) > 127) {
+                printf("메시지가 너무 깁니다.\n");
+                continue;
+            }
             receive_message(nickname, message);
         } else if (strcmp(command, "read") == 0) {
             read_messages();
@@ -261,11 +271,13 @@ int main(int argc, char* argv[]) {
             upload_file(nickname);
         } else if (strcmp(command, "search") == 0) {
             printf("검색어 입력: ");
-            scanf("%s", keyword);
+            if (!fgets(keyword, sizeof(keyword), stdin)) return 0;
+            keyword[strcspn(keyword, "\n")] = 0; // 개행 문자 제거
             search_file(keyword);
         } else if (strcmp(command, "tagsearch") == 0) {
             printf("태그 입력: ");
-            scanf("%s", keyword);
+            if (!fgets(keyword, sizeof(keyword), stdin)) return 0;
+            keyword[strcspn(keyword, "\n")] = 0; // 개행 문자 제거
             tag_search_file(keyword);
         } else if (strcmp(command, "tags") == 0) {
             list_tags();

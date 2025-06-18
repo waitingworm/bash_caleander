@@ -27,15 +27,17 @@ int space_available() {
 void pass_message(char* message, int message_length) {
 	pthread_mutex_lock(&mutex);
 	int i;
-	char ct[24];
+	char ct[64];
 
 	for(i = 0; i < 100; i++) {
 		if(clients[i] >= 0 && message_length > 0) {
-			write(clients[i], message, message_length);
+			if (write(clients[i], message, message_length) < 0) {
+				/*에러처리*/
+			}
 
 			tm = time(NULL);
 			current_time = *localtime(&tm);
-			sprintf(ct, "%d-%d-%d %d:%d:%d ", current_time.tm_year + 1900, current_time.tm_mon + 1, current_time.tm_mday, current_time.tm_hour, current_time.tm_min, current_time.tm_sec);
+			snprintf(ct, sizeof(ct), "%d-%d-%d %d:%d:%d ", current_time.tm_year + 1900, current_time.tm_mon + 1, current_time.tm_mday, current_time.tm_hour, current_time.tm_min, current_time.tm_sec);
 			fputs(ct, chat_log);
 			fputs(message, chat_log);
 			
@@ -49,7 +51,11 @@ void* manage_client(void* client_socket) {
 	int message_length;
 	char message[1024];
 
-	while(message_length = read(*(int*)client_socket, message, sizeof(message))) {
+	while((message_length = read(*(int*)client_socket, message, sizeof(message))) > 0) {
+		if(message_length > 1023) {
+			printf("메시지가 너무 깁니다.\n");
+			continue;
+		}
 		if(!(message_length - 1)) break;
 
 		pass_message(message, message_length);
@@ -84,7 +90,7 @@ int main(int argc, char* argv[]) {
 
 	int server_socket, client_socket;
 	struct sockaddr_in server_address, client_address;
-	int client_address_size = sizeof(client_address);
+	socklen_t client_address_size = sizeof(client_address);
 	pthread_t clients_t[100];
 
 	pthread_mutex_init(&mutex, NULL);

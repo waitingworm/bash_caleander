@@ -1,0 +1,124 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <pthread.h>
+#include <time.h>
+
+pthread_mutex_t mutex;
+int clients_num;
+int clients[100]= {[0 ... 99]= -1};
+FILE* chat_log;
+time_t tm;
+struct tm current_time;
+
+int space_available() {
+	int i;
+	for(i= 0; i < 100; i++) {
+		if(clients[i] < 0)
+			return i;
+	}
+
+	return i;
+}
+
+void pass_message(char* message, int message_length) {
+	pthread_mutex_lock(&mutex);
+		int i;
+		char ct[24];
+
+		for(i= 0; i < 100; i++) {
+			if(clients[i] >= 0 && message_length-1) {
+				write(clients[i], message, message_length);
+
+				tm= time(NULL);
+				current_time= *localtime(&tm);
+				sprintf(ct, "%d-%d-%d %d:%d:%d ", current_time.tm_year+1900, current_time.tm_mon+1, current_time.tm_mday, current_time.tm_hour, current_time.tm_min, current_time.tm_sec);
+				fputs(ct, chat_log);
+				fputs(message, chat_log);
+				
+				printf("%d에게 다음 내용 전송: %s\n", clients[i], message);
+			}
+		}
+	pthread_mutex_unlock(&mutex);
+}
+
+void* manage_client(void* client_socket) {
+	int message_length;
+	char message[1024];
+
+	while(message_length= read(*(int*)client_socket, message, sizeof(message))) {
+		if(!(message_length-1)) break;
+
+		pass_message(message, message_length);
+		printf("길이: %d, 연결 유지 중\n", message_length);
+	}
+	
+	printf("%d의 연결 해제 발생\n", *(int*)client_socket);
+	
+	pthread_mutex_lock(&mutex);
+		int i;
+		for(i= 0; i < 100; i++) {
+			if(*(int*)client_socket == clients[i]) {
+				clients[i]= -1;
+				break;
+			}
+		}
+		--clients_num;
+		printf("저런! 용사 1명이 낙오됐어요! 현재 %d명!\n", clients_num);
+	pthread_mutex_unlock(&mutex);
+	
+	close(*(int*)client_socket);
+
+	if(!clients_num) fclose(chat_log);
+}
+
+
+int main(int argc, char* argv[]) {
+	int server_socket, client_socket;
+	struct sockaddr_in server_address, client_address;
+	int client_address_size= sizeof(client_address);
+	pthread_t clients_t[100];
+
+	pthread_mutex_init(&mutex, NULL);
+	server_socket= socket(PF_INET, SOCK_STREAM, 0);
+	server_address.sin_family= AF_INET;
+	server_address.sin_addr.s_addr= htonl(INADDR_ANY);
+	server_address.sin_port= htons(atoi(argv[1]));
+
+	if(bind(server_socket, (struct sockaddr*)&server_address, sizeof(server_address)) == -1) {
+		printf("Failed to bind address to socket.\n");
+		exit(1);
+	}
+	
+	if(listen(server_socket, 10) == -1) {
+		printf("앗! 우당탕 사고 발생!\n");
+		exit(1);
+	}
+	
+	chat_log= fopen("chat_log.txt", "a");
+	printf("문을 열었어요! 오늘은 어떤 모험가가 사고를 칠까요? ></\n");
+	
+	while(1) {
+		client_socket= accept(server_socket, (struct sockaddr*)&client_address, &client_address_size);
+		
+		pthread_mutex_lock(&mutex);
+			int available= space_available();
+			clients[available]= client_socket;
+		
+			printf("%d번 socket은 %d번에 할당했습니다.\n", client_socket, available);
+			++clients_num;
+		pthread_mutex_unlock(&mutex);
+		
+		pthread_create(&clients_t[available], NULL, manage_client, (void*)&clients[available]);
+		pthread_detach(clients_t[available]);
+
+		printf("모험가 등장! 파티원은 %d명이랍니다. IP: %s\n", clients_num, inet_ntoa(client_address.sin_addr));
+	}
+
+	close(server_socket);
+	return 0;
+}
