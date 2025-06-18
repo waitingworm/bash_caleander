@@ -28,23 +28,17 @@ void* send_message(void* server_socket) {
 	}
 
 	while(1) {
-		if(fgets(message, sizeof(message), stdin) == NULL) {
-			break;
-		}
+		fgets(message, 1008, stdin);
+		fflush(stdin);
 
-		if(!strncmp(message, "::quit", 6)) {
-			if(write(sock, "\0", 1) < 0) {
-				perror("종료 메시지 전송 실패");
-			}
+		if(!strncmp(message, "exit", 4) || !strncmp(message, "::quit", 6)) {
+			write(sock, "\0", 1);
 			close(sock);
 			exit(0);
 		}
 
-		snprintf(name_message, sizeof(name_message), "[%s]: %s", my_name, message);
-		if(write(sock, name_message, strlen(name_message) + 1) < 0) {
-			perror("메시지 전송 실패");
-			break;
-		}
+		sprintf(name_message, "[%s]: %s", my_name, message);
+		write(sock, name_message, strlen(name_message)+1);
 	}
 	return NULL;
 }
