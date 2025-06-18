@@ -91,4 +91,13 @@ make all
 - Linux 환경
 
 ## 라이선스
-MIT License 
+MIT License
+
+## ⚠️ Rocky Linux 사용 시 주의사항
+
+- Rocky Linux 등 일부 배포판에서는 기존에 빌드된 실행파일이 glibc 버전 문제로 실행되지 않을 수 있습니다.
+- **반드시 빌드 전에 아래 명령어로 기존 실행파일을 정리하세요:**
+  ```bash
+  make clean
+  ```
+- 그 후 `make all`로 새로 빌드하면 해당 시스템에서 정상적으로 동작합니다. 
