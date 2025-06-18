@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -8,10 +9,17 @@
 #include <fcntl.h>
 #include <locale.h>
 
+// usleep 함수 선언
+extern int usleep(useconds_t usec);
+
 #define WORK_TIME 25
 #define SHORT_BREAK 5
 #define LONG_BREAK 15
 #define SESSIONS_BEFORE_LONG_BREAK 4
+#define FILENAME_BUFFER_SIZE 64
+
+// kbhit 함수 선언
+int kbhit(void);
 
 // 전역 변수
 int work_time = WORK_TIME;
@@ -78,16 +86,18 @@ void display_timer(int minutes, int seconds, int total_seconds, const char* phas
 
 // 세션 기록 저장 함수
 void save_session_record(const char* phase, int duration) {
+    (void)duration;  // 사용하지 않는 매개변수 경고 제거
     time_t now = time(NULL);
     struct tm* t = localtime(&now);
-    char filename[32];
-    sprintf(filename, "pomodoro_log_%04d%02d%02d.txt", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);
+    char filename[FILENAME_BUFFER_SIZE];
+    snprintf(filename, FILENAME_BUFFER_SIZE, "pomodoro_log_%04d%02d%02d.txt", 
+             t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);
     
     FILE* file = fopen(filename, "a");
     if (file) {
         char task_info[120] = "";
         if (strlen(current_task) > 0) {
-            sprintf(task_info, " (작업: %s)", current_task);
+            snprintf(task_info, sizeof(task_info), " (작업: %s)", current_task);
         }
         fprintf(file, "[%02d:%02d:%02d] %s 완료%s\n", 
                 t->tm_hour, t->tm_min, t->tm_sec, phase, task_info);
@@ -166,28 +176,42 @@ void settings_menu() {
         printf("선택: ");
         
         int choice;
-        scanf("%d", &choice);
-        getchar();  // 개행 문자 제거
+        if (scanf("%d", &choice) != 1) {
+            while (getchar() != '\n');
+            continue;
+        }
+        while (getchar() != '\n');
         
         switch (choice) {
             case 1:
                 printf("작업 시간(분): ");
-                scanf("%d", &work_time);
-                getchar();  // 개행 문자 제거
+                if (scanf("%d", &work_time) != 1) {
+                    while (getchar() != '\n');
+                    continue;
+                }
+                while (getchar() != '\n');
                 break;
             case 2:
                 printf("짧은 휴식 시간(분): ");
-                scanf("%d", &short_break);
-                getchar();  // 개행 문자 제거
+                if (scanf("%d", &short_break) != 1) {
+                    while (getchar() != '\n');
+                    continue;
+                }
+                while (getchar() != '\n');
                 break;
             case 3:
                 printf("긴 휴식 시간(분): ");
-                scanf("%d", &long_break);
-                getchar();  // 개행 문자 제거
+                if (scanf("%d", &long_break) != 1) {
+                    while (getchar() != '\n');
+                    continue;
+                }
+                while (getchar() != '\n');
                 break;
             case 4:
                 printf("작업 이름: ");
-                fgets(current_task, sizeof(current_task), stdin);
+                if (fgets(current_task, sizeof(current_task), stdin) == NULL) {
+                    continue;
+                }
                 current_task[strcspn(current_task, "\n")] = 0;
                 break;
             case 5:
@@ -211,8 +235,8 @@ void statistics_menu() {
     
     time_t now = time(NULL);
     struct tm* t = localtime(&now);
-    char filename[32];
-    sprintf(filename, "pomodoro_log_%04d%02d%02d.txt", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);
+    char filename[FILENAME_BUFFER_SIZE];
+    snprintf(filename, FILENAME_BUFFER_SIZE, "pomodoro_log_%04d%02d%02d.txt", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);
     
     FILE* file = fopen(filename, "r");
     if (file) {
@@ -258,8 +282,11 @@ void main_menu() {
         printf("선택: ");
         
         int choice;
-        scanf("%d", &choice);
-        getchar();  // 개행 문자 제거
+        if (scanf("%d", &choice) != 1) {
+            while (getchar() != '\n');
+            continue;
+        }
+        while (getchar() != '\n');
         
         switch (choice) {
             case 1:
@@ -293,7 +320,7 @@ int main() {
 }
 
 // kbhit 함수 구현
-int kbhit() {
+int kbhit(void) {
     struct termios oldt, newt;
     int ch;
     int oldf;
