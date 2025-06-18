@@ -49,8 +49,8 @@ int main(int argc, char* argv[]) {
 	
 	int bytes_received;
 	while ((bytes_received = recv(my_socket, ibuf, 1024, 0)) > 0) {
-		if (fwrite(ibuf, 1, bytes_received, file) != bytes_received) {
-			perror("파일 쓰기 실패\n");
+		if (fwrite(ibuf, 1, bytes_received, file) != (size_t)bytes_received) {
+			printf("파일 쓰기 오류\n");
 			break;
 		}
 		memset(ibuf, 0, 1024);
