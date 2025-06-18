@@ -432,11 +432,19 @@ run_terminal_chat() {
 					read -p "닉네임: " nickname
 					# 서버를 백그라운드로 실행
 					$PROGRAM_DIR/chatserver $port &
+					SERVER_PID=$!
 					# 서버가 시작될 때까지 잠시 대기
 					sleep 2
 					# 클라이언트를 백그라운드로 실행
 					$PROGRAM_DIR/chatclient "127.0.0.1" $port $nickname &
+					CLIENT_PID=$!
 					echo "서버와 클라이언트가 백그라운드에서 실행 중입니다."
+					echo "채팅을 종료하려면 Ctrl+C를 누르세요."
+					# 사용자가 Ctrl+C를 누를 때까지 대기
+					trap "kill $SERVER_PID $CLIENT_PID 2>/dev/null; exit 0" INT
+					wait $CLIENT_PID
+					# 클라이언트가 종료되면 서버도 종료
+					kill $SERVER_PID 2>/dev/null
 					;;
 				2)
 					read -p "서버 IP (기본: 127.0.0.1): " ip
@@ -464,11 +472,19 @@ run_terminal_chat() {
 					port=${port:-8080}
 					# 서버를 백그라운드로 실행
 					$PROGRAM_DIR/ftpserver $filename $port &
+					SERVER_PID=$!
 					# 서버가 시작될 때까지 잠시 대기
 					sleep 2
 					# 클라이언트를 백그라운드로 실행
 					$PROGRAM_DIR/ftpclient "127.0.0.1" $port &
+					CLIENT_PID=$!
 					echo "서버와 클라이언트가 백그라운드에서 실행 중입니다."
+					echo "FTP를 종료하려면 Ctrl+C를 누르세요."
+					# 사용자가 Ctrl+C를 누를 때까지 대기
+					trap "kill $SERVER_PID $CLIENT_PID 2>/dev/null; exit 0" INT
+					wait $CLIENT_PID
+					# 클라이언트가 종료되면 서버도 종료
+					kill $SERVER_PID 2>/dev/null
 					;;
 				2)
 					read -p "서버 IP (기본: 127.0.0.1): " ip
